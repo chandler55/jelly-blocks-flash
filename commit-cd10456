@@ -1,0 +1,3460 @@
+commit cd10456d8046c3e95ea3373adf1083056d44fdcd
+Author: Michael Le <michaelle@gmail.com>
+Date:   Tue Oct 19 13:51:31 2010 -0400
+
+    uploading code
+
+diff --git a/Explosion.as b/Explosion.as
+new file mode 100644
+index 0000000..398b525
+--- /dev/null
++++ b/Explosion.as
+@@ -0,0 +1,144 @@
++package
++{
++	import flash.display.BitmapData;
++	import flash.geom.ColorTransform;
++	
++	public class Explosion
++	{
++		/*
++			EXPLOSION PARAMETERS
++		*/
++		//-- START VALUES
++		private const EXPLOSION_RADIUS: int = 30;
++		private const EXPLOSION_MAX_VELOCITY: Number = 2;
++		private const EXPLOSION_MAX_HEAT: int = -1; // causes particles to move up
++		
++		private const PARTICLE_CHAOTIC_MOVE: Number = 0;
++		private const PARTICLE_DAMP_MOVE: Number = .95;
++		private const PARTICLE_DAMP_ENERGIE: Number = .999;
++		
++		//-- AMOUNT
++		private const P_COUNT: int = 200;
++		private const PCOUNT_EACH_FRAME: int = 200;
++
++		private var t_particles: Array;
++		private var c_particles: Array;
++		
++		private var energie: Number;
++		//private var transform: ColorTransform;
++		private var color:int = 0;
++		private var counter:int = 0;
++		private var dead:Boolean = false;
++		public function Explosion( x: Number, y: Number, fcolor:int )
++		{
++			init( x, y, fcolor );
++		}
++		public function getColor():int {
++			return color;
++		}
++		public function isDead():Boolean {
++			return dead;
++		}
++		
++		private function init( x: Number, y: Number, fcolor:int ): void
++		{
++			color = fcolor;
++			t_particles = new Array();
++			c_particles = new Array();
++			
++			energie = 1;
++			
++			var a: Number;
++			var s: Number;
++			var l: Number;
++			
++			var particle: Particle;
++			
++			for( var i: int = 0 ; i < P_COUNT ; i++ )
++			{
++				a = Math.random() * Math.PI * 2;
++				s = Math.random() * EXPLOSION_MAX_VELOCITY + 1;
++				l = Math.random() * EXPLOSION_RADIUS;
++				
++				particle = new Particle
++				(
++					//-- screen position
++					x + Math.sin( a ) * l,
++					y + Math.cos( a ) * l,
++					
++					//-- velocity (x,y)
++					Math.sin( a ) * s,
++					Math.cos( a ) * s - Math.random() * EXPLOSION_MAX_HEAT,
++					
++					//-- start energie, damp energie
++					1,
++					PARTICLE_DAMP_ENERGIE
++				);
++				
++				t_particles.push( particle );
++			}
++		}
++		
++		public function render( buffer: BitmapData ): void
++		{
++			counter++;
++			if (counter > 50)
++				dead = true;
++			if( t_particles.length >= PCOUNT_EACH_FRAME )
++			{
++				c_particles = c_particles.concat( t_particles.splice( -PCOUNT_EACH_FRAME ) );
++			}
++			else if( t_particles.length > 0 )
++			{
++				c_particles = t_particles.splice();
++			}
++			
++			var particle: Particle;
++			var sx: Number;
++			var sy: Number;
++			var vx: Number;
++			var vy: Number;
++			
++			var e: int;
++			
++			var i: int = c_particles.length;
++
++			while( --i > -1 )
++			{
++				particle = c_particles[i];
++				
++				sx = particle.sx;
++				sy = particle.sy;
++				vx = particle.vx;
++				vy = particle.vy;
++				
++				//vx += Math.random() / ( .5 / PARTICLE_CHAOTIC_MOVE ) - PARTICLE_CHAOTIC_MOVE;
++				//vy += Math.random() / ( .5 / PARTICLE_CHAOTIC_MOVE ) - PARTICLE_CHAOTIC_MOVE;
++				
++				if( particle.energie < .1 )
++				{
++					c_particles.splice( i, 1 );
++				}
++				
++				particle.energie *= particle.energieDamp;
++				
++				buffer.setPixel32( sx, sy, int(   0xff ) * 16843009 );
++				//buffer.setPixel32( sx+1, sy, int( particle.energie * 0xff ) * 16843009 );
++				//buffer.setPixel32( sx, sy+1, int( particle.energie * 0xff ) * 16843009 );
++				//buffer.setPixel32( sx+1, sy+1, int( particle.energie * 0xff ) * 16843009 );
++
++				
++				sx += vx;
++				sy += vy;
++				
++				vx *= PARTICLE_DAMP_MOVE;
++				vy *= PARTICLE_DAMP_MOVE;
++				
++				particle.sx = sx;
++				particle.sy = sy;
++				particle.vx = vx;
++				particle.vy = vy;
++			}
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/FPS.as b/FPS.as
+new file mode 100644
+index 0000000..6cfa9e2
+--- /dev/null
++++ b/FPS.as
+@@ -0,0 +1,46 @@
++package
++{
++	import flash.events.Event;
++	import flash.text.TextField;
++	import flash.text.TextFormat;
++	import flash.utils.getTimer;
++	
++	public class FPS extends TextField
++	{
++		private var fs: int;
++		private var ms: int;
++		
++		public function FPS()
++		{
++			var format: TextFormat = new TextFormat();
++			
++			format.color = 0x666666;
++			format.size = 10;
++			format.bold = true;
++			format.font = 'Verdana';
++			
++			textColor = 0xcecece;
++			autoSize = "left";
++			defaultTextFormat = format;
++			
++			ms = getTimer();
++			fs = 0;
++			
++			addEventListener( Event.ENTER_FRAME, onEnterFrame );
++		}
++		
++		private function onEnterFrame( event: Event ): void
++		{
++			if( getTimer() - 1000 > ms )
++			{
++				ms = getTimer();
++				text = fs.toString();
++				fs = 0;
++			}
++			else
++			{
++				++fs;
++			}
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/FPSCounter.as b/FPSCounter.as
+new file mode 100644
+index 0000000..10cdf14
+--- /dev/null
++++ b/FPSCounter.as
+@@ -0,0 +1,40 @@
++package
++{
++ import flash.display.Sprite;
++ import flash.text.TextField;
++ import flash.utils.getTimer;
++ import flash.events.Event;
++ import com.jxl.diesel.view.core.BitmapSprite;
++ public class FPSCounter extends Sprite
++ {
++  private var startTick : Number;
++  private var numFrames : Number;
++  private var FPS :TextField;
++  
++  public function FPSCounter()
++  {
++   numFrames = 0;
++   startTick  = getTimer();
++   FPS = new TextField();
++   FPS.textColor = 0xFF00FF;
++   addChild(FPS);
++   
++   addEventListener(Event.ENTER_FRAME,onEnterFrame);
++
++  }
++  
++  public function onEnterFrame(event:Event):void
++  {
++   numFrames++;
++   var t : Number = (getTimer() - startTick) * 0.001;
++   
++   
++   if(t > 0.1)
++   {
++    FPS.text = "FPS: " + (Math.floor((numFrames/t)*10.0)/10.0); 
++   }
++  }
++ }
++ 
++ 
++}
+\ No newline at end of file
+diff --git a/Gameplay.as b/Gameplay.as
+new file mode 100644
+index 0000000..5725db3
+--- /dev/null
++++ b/Gameplay.as
+@@ -0,0 +1,12 @@
++package
++{
++	public class Gameplay extends Gamestate
++	{
++		public function Render() {
++			
++		}
++		public function Logic() {
++			Render();
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/Gamestate.as b/Gamestate.as
+new file mode 100644
+index 0000000..e810f7f
+--- /dev/null
++++ b/Gamestate.as
+@@ -0,0 +1,13 @@
++package
++{
++	public class Gamestate
++	{
++		public function Render() {
++			
++		}
++		
++		public function Logic() {
++			
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/Gradient.as b/Gradient.as
+new file mode 100644
+index 0000000..b5c298f
+--- /dev/null
++++ b/Gradient.as
+@@ -0,0 +1,39 @@
++package
++{
++	import flash.display.BitmapData;
++	import flash.display.Graphics;
++	import flash.display.Shape;
++	import flash.geom.Matrix;
++	
++	public class Gradient
++	{
++		static private const IDENTITY: Matrix = new Matrix();
++		
++		static public function getArray( colors: Array, alphas: Array, ratio: Array ): Array
++		{
++			var a: Array = new Array();
++			var s: Shape = new Shape();
++			var m: Matrix = new Matrix();
++			var o: BitmapData = new BitmapData( 256, 1, true, 0 );
++			var g: Graphics = s.graphics;
++			
++			m.createGradientBox( 256, 256, 0, 0, 0 );
++			
++			g.clear();
++			g.beginGradientFill( 'linear', colors, alphas, ratio, m );
++			g.drawRect( 0, 0, 256, 256 );
++			g.endFill();
++			
++			o.draw( s, IDENTITY );
++			
++			var c: uint;
++			
++			for( var i: int = 0 ; i < 256 ; i++ )
++			{
++				a.push( c = o.getPixel32( i, 0 ) );
++			}
++			
++			return a;
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/Image.as b/Image.as
+new file mode 100644
+index 0000000..5a2a2b4
+--- /dev/null
++++ b/Image.as
+@@ -0,0 +1,31 @@
++package
++{
++	import com.jxl.diesel.view.core.BitmapSprite;
++	import flash.display.Bitmap;
++	import com.jxl.diesel.view.core.BitmapSpriteDisplayObject;
++	import flash.events.MouseEvent;
++	
++	public class Image
++	{
++		var bitmap:Bitmap;
++		var bitmapSprite:BitmapSprite;
++		
++		public function Image(what:Class, bsdo:BitmapSpriteDisplayObject) {
++			bitmap = new what() as Bitmap;
++			bitmapSprite = new BitmapSprite();
++			bitmapSprite.setBitmap(bitmap);
++			bsdo.addBitmapSprite(bitmapSprite);
++			move(-900,-900);
++			
++		}
++		public function getBS():BitmapSprite {
++			return bitmapSprite;
++		}
++		public function getBitmap():Bitmap {
++			return bitmap;
++		}
++		public function move(x:int, y:int):void {
++			bitmapSprite.move(x,y,false);
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/Key.as b/Key.as
+new file mode 100644
+index 0000000..d3e531b
+--- /dev/null
++++ b/Key.as
+@@ -0,0 +1,84 @@
++// Key.as
++package {
++   
++    import flash.display.Stage;
++    import flash.events.Event;
++    import flash.events.KeyboardEvent;
++   
++    /**
++     * The Key class recreates functionality of
++     * Key.isDown of ActionScript 1 and 2. Before using
++     * Key.isDown, you first need to initialize the
++     * Key class with a reference to the stage using
++     * its Key.initialize() method. For key
++     * codes use the flash.ui.Keyboard class.
++     *
++     * Usage:
++     * Key.initialize(stage);
++     * if (Key.isDown(Keyboard.LEFT)) {
++     *    // Left key is being pressed
++     * }
++     */
++    public class Key {
++       
++        private static var initialized:Boolean = false;  // marks whether or not the class has been initialized
++        private static var keysDown:Object = new Object();  // stores key codes of all keys pressed
++       
++        /**
++         * Initializes the key class creating assigning event
++         * handlers to capture necessary key events from the stage
++         */
++        public static function initialize(stage:Stage) {
++            if (!initialized) {
++                // assign listeners for key presses and deactivation of the player
++                stage.addEventListener(KeyboardEvent.KEY_DOWN, keyPressed);
++                stage.addEventListener(KeyboardEvent.KEY_UP, keyReleased);
++                stage.addEventListener(Event.DEACTIVATE, clearKeys);
++               
++                // mark initialization as true so redundant
++                // calls do not reassign the event handlers
++                initialized = true;
++            }
++        }
++       
++        /**
++         * Returns true or false if the key represented by the
++         * keyCode passed is being pressed
++         */
++        public static function isDown(keyCode:uint):Boolean {
++            if (!initialized) {
++                // throw an error if isDown is used
++                // prior to Key class initialization
++                throw new Error("Key class has yet been initialized.");
++            }
++            return Boolean(keyCode in keysDown);
++        }
++       
++        /**
++         * Event handler for capturing keys being pressed
++         */
++        private static function keyPressed(event:KeyboardEvent):void {
++            // create a property in keysDown with the name of the keyCode
++            keysDown[event.keyCode] = true;
++        }
++       
++        /**
++         * Event handler for capturing keys being released
++         */
++        private static function keyReleased(event:KeyboardEvent):void {
++            if (event.keyCode in keysDown) {
++                // delete the property in keysDown if it exists
++                delete keysDown[event.keyCode];
++            }
++        }
++       
++        /**
++         * Event handler for Flash Player deactivation
++         */
++        private static function clearKeys(event:Event):void {
++            // clear all keys in keysDown since the player cannot
++            // detect keys being pressed or released when not focused
++            keysDown = new Object();
++        }
++    }
++}
+\ No newline at end of file
+diff --git a/Main.as b/Main.as
+new file mode 100644
+index 0000000..57d3f40
+--- /dev/null
++++ b/Main.as
+@@ -0,0 +1,146 @@
++package
++{
++	import flash.display.Bitmap;
++	import flash.display.BitmapData;
++	import flash.display.Sprite;
++	import flash.events.Event;
++	import flash.events.MouseEvent;
++	import flash.events.TimerEvent;
++	import flash.filters.BlurFilter;
++	import flash.geom.Matrix;
++	import flash.geom.Point;
++	import flash.media.Sound;
++	import flash.utils.Timer;
++	import flash.geom.Rectangle;
++	import flash.ui.Mouse;
++	import com.hexagonstar.util.debug.Debug;
++	
++	[SWF( backgroundColor='0x10101a', frameRate='44', width='384', height='384')]
++
++	public class Main extends Sprite
++	{
++		private const WIDTH: int = 384;
++		private const HEIGHT: int = 384;
++		
++		private const ORIGIN: Point = new Point();
++		
++		//-- APPEARANCE
++		private const EXPLOSION_BLUR_STRENGTH: int = 2;
++		private const EXPLOSION_BLUR_QUALITY: int = 1;
++		
++		private var blur: BlurFilter;
++		
++		private var buffer: BitmapData;
++		private var output: BitmapData;
++		private var temp:BitmapData;
++		private var explosions: Array;
++		private var fireColors: Array;
++		private var whichColor:int = 0;
++		
++	//	[Embed(source='bin/explosion.mp3')]
++	//	private var ExplosionSoundAsset: Class;
++	//	private var explosionSound: Sound;
++	
++		public function Main()
++		{
++			Debug.trace("hi");
++			init();
++			Debug.fpsStart(stage);
++		}
++		
++		private function init(): void
++		{
++			buffer = new BitmapData( WIDTH, HEIGHT, false, 0 );
++			output = new BitmapData( WIDTH, HEIGHT, false, 0 );
++			temp = new BitmapData(WIDTH, HEIGHT, true,0);
++	//		explosionSound = Sound( new ExplosionSoundAsset() );
++			
++			blur = new BlurFilter( EXPLOSION_BLUR_STRENGTH, EXPLOSION_BLUR_STRENGTH, EXPLOSION_BLUR_QUALITY );
++			
++			addChild( new Bitmap( output ) );
++			
++			explosions = new Array();
++			stage.addEventListener( MouseEvent.MOUSE_DOWN, MouseDown );
++			stage.addEventListener( MouseEvent.MOUSE_DOWN, createExplosion );
++			stage.addEventListener( Event.ENTER_FRAME, render );
++		}
++		private function MouseDown(event:MouseEvent) {
++			
++
++		}
++		private function createExplosion( event: Event ): void
++		{
++			whichColor++;
++			if (whichColor == 3)
++				whichColor = 0;
++				
++			var explosion: Explosion = new Explosion( mouseX, mouseY, whichColor );
++			explosions.push( explosion );
++			//explosionSound.play();
++		}
++		private function createExplosion( event: Event ): void
++		{
++			whichColor++;
++			if (whichColor == 3)
++				whichColor = 0;
++				
++			var explosion: Explosion = new Explosion( mouseX, mouseY, whichColor );
++			explosions.push( explosion );
++			//explosionSound.play();
++		}
++		private function render( event: Event ): void
++		{
++			buffer.fillRect(buffer.rect,0);
++			
++			var explosion: Explosion;
++			var i: int = explosions.length;
++			
++			while( --i > -1 )
++			{	
++				temp.fillRect(temp.rect,0);
++				explosion = explosions[i];
++				explosion.render( temp );
++				if (explosion.isDead()) {
++					explosions.splice(0,1);
++				}
++			//	Debug.trace(explosions.length);
++				switch (explosion.getColor()) {
++					case 0:
++						fireColors = Gradient.getArray
++						(
++							[ 0, 0, 0x333333, 0xff0000, 0xffff00, 0xffffff ],
++							[ 0, 0, 1, 1, 1, 1 ],
++							[ 0, 0x22, 0x44, 0x55, 0x88, 0xff ]
++						);
++						break;
++					case 1:
++						fireColors = Gradient.getArray
++						(
++							[ 0, 0, 0x333333, 0x0000ff, 0x5555ff, 0xffffff ],
++							[ 0, 0, 1, 1, 1, 1 ],
++							[ 0, 0x22, 0x44, 0x55, 0x88, 0xff ]
++						);
++						break;
++					case 2:
++						fireColors = Gradient.getArray
++						(
++							[ 0, 0, 0x333333, 0x00ff00, 0xffff00, 0xffffff ],
++							[ 0, 0, 1, 1, 1, 1 ],
++							[ 0, 0x22, 0x44, 0x55, 0x88, 0xff ]
++						);
++						break;
++				}
++
++				temp.applyFilter( temp, temp.rect, ORIGIN, blur );
++				
++				buffer.copyPixels(temp,temp.rect,ORIGIN,null,null,true);
++				//buffer.paletteMap( buffer, temp.rect, ORIGIN, [], [], fireColors, [] );	
++			}
++			
++			//buffer.applyFilter( buffer, buffer.rect, ORIGIN, blur );	
++			buffer.paletteMap( buffer, buffer.rect, ORIGIN, [], [], fireColors, [] );
++			
++			output.copyPixels( buffer, buffer.rect, ORIGIN );
++		}
++	}
++}
+diff --git a/MochiAd.as b/MochiAd.as
+new file mode 100644
+index 0000000..b42f4af
+--- /dev/null
++++ b/MochiAd.as
+@@ -0,0 +1,730 @@
++﻿/*
++    MochiAds.com ActionScript 3 code, version 1.5
++
++    Flash movies should be published for Flash 9 or later.
++
++    Copyright (C) 2006-2007 Mochi Media, Inc. All rights reserved.
++*/
++
++package {
++    import flash.system.Security;
++    import flash.display.MovieClip;
++    import flash.display.Loader;
++    import flash.events.Event;
++    import flash.events.IOErrorEvent;
++    import flash.net.URLRequest;
++    import flash.net.URLRequestMethod;
++    import flash.net.URLVariables;
++    import flash.net.LocalConnection;
++    import flash.utils.getTimer;
++    
++    public class MochiAd {
++
++        public static function getVersion():String {
++            return "1.5";
++        }
++
++        public static function doOnEnterFrame(mc:MovieClip):void {
++            var f:Function = function (ev:Object):void {
++                if ('onEnterFrame' in mc && mc.onEnterFrame) {
++                    mc.onEnterFrame();
++                } else {
++                    mc.removeEventListener(Event.ENTER_FRAME, f);
++                }
++                
++            }
++            mc.addEventListener(Event.ENTER_FRAME, f);
++        }
++                
++        public static function createEmptyMovieClip(parent:Object, name:String, depth:Number):MovieClip {
++            var mc:MovieClip = new MovieClip();
++            if (false && depth) {
++                parent.addChildAt(mc, depth);
++            } else {
++                parent.addChild(mc);
++            }
++            parent[name] = mc;
++            mc["_name"] = name;
++            return mc;
++        }
++        
++        public static function showPreloaderAd(options:Object):void {
++            /*
++                This function will stop the clip, load the MochiAd in a
++                centered position on the clip, and then resume the clip
++                after a timeout or when this movie is loaded, whichever
++                comes first.
++
++                options:
++                    An object with keys and values to pass to the server.
++                    These options will be passed to MochiAd.load, but the
++                    following options are unique to showPreloaderAd.
++
++                    clip is a MovieClip reference to place the ad in.
++                    clip must be dynamic.
++
++                    ad_timeout is the number of milliseconds to wait
++                    for the ad to start loading (default: 2000).
++
++                    color is the color of the preloader bar
++                    as a number (default: 0xFF8A00)
++
++                    background is the inside color of the preloader
++                    bar as a number (default: 0xFFFFC9)
++
++                    outline is the outline color of the preloader
++                    bar as a number (default: 0xD58B3C)
++
++                    fadeout_time is the number of milliseconds to
++                    fade out the ad upon completion (default: 250).
++
++                    ad_started is the function to call when the ad
++                    has started (may not get called if network down)
++                    (default: function ():void { this.clip.stop() }).
++
++                    ad_finished is the function to call when the ad
++                    has finished or could not load
++                    (default: function ():void { this.clip.play() }).
++            */
++            var DEFAULTS:Object = {
++                ad_timeout: 3000,
++                fadeout_time: 250,
++                regpt: "o",
++                method: "showPreloaderAd",
++                color: 0xFF8A00,
++                background: 0xFFFFC9,
++                outline: 0xD58B3C,
++                ad_started: function ():void { this.clip.stop(); },
++                ad_finished: function ():void { this.clip.play(); }
++            };
++
++            options = MochiAd._parseOptions(options, DEFAULTS);
++
++            var clip:Object = options.clip;
++            var ad_msec:Number = 11000;
++            var ad_timeout:Number = options.ad_timeout;
++            delete options.ad_timeout;
++            var fadeout_time:Number = options.fadeout_time;
++            delete options.fadeout_time;
++
++            if (!MochiAd.load(options)) {
++                options.ad_finished();
++                return;
++            }
++
++            options.ad_started();
++
++            var mc:MovieClip = clip._mochiad;
++            mc["onUnload"] = function ():void {
++                options.ad_finished();
++            }
++            
++
++            /* Center the clip */
++            
++            var wh:Array = MochiAd._getRes(options, clip);
++            
++            var w:Number = wh[0];
++            var h:Number = wh[1];
++            mc.x = w * 0.5;
++            mc.y = h * 0.5;
++        
++            var chk:MovieClip = createEmptyMovieClip(mc, "_mochiad_wait", 3);
++            chk.x = w * -0.5;
++            chk.y = h * -0.5;
++
++            var bar:MovieClip = createEmptyMovieClip(chk, "_mochiad_bar", 4);
++            bar.x = 10;
++            bar.y = h - 20;
++
++            var bar_color:Number = options.color;
++            delete options.color;
++            var bar_background:Number = options.background;
++            delete options.background;
++            var bar_outline:Number = options.outline;
++            delete options.outline;
++
++            var backing_mc:MovieClip = createEmptyMovieClip(bar, "_outline", 1);
++            var backing:Object = backing_mc.graphics;
++
++            backing.beginFill(bar_background);
++            backing.moveTo(0, 0);
++            backing.lineTo(w - 20, 0);
++            backing.lineTo(w - 20, 10);
++            backing.lineTo(0, 10);
++            backing.lineTo(0, 0);
++            backing.endFill();
++            
++            var inside_mc:MovieClip = createEmptyMovieClip(bar, "_inside", 2);
++            var inside:Object = inside_mc.graphics;
++            inside.beginFill(bar_color);
++            inside.moveTo(0, 0);
++            inside.lineTo(w - 20, 0);
++            inside.lineTo(w - 20, 10);
++            inside.lineTo(0, 10);
++            inside.lineTo(0, 0);
++            inside.endFill();
++            inside_mc.scaleX = 0;
++
++            var outline_mc:MovieClip = createEmptyMovieClip(bar, "_outline", 3);
++            var outline:Object = outline_mc.graphics;
++            outline.lineStyle(0, bar_outline, 100);
++            outline.moveTo(0, 0);
++            outline.lineTo(w - 20, 0);
++            outline.lineTo(w - 20, 10);
++            outline.lineTo(0, 10);
++            outline.lineTo(0, 0);
++
++            chk.ad_msec = ad_msec;
++            chk.ad_timeout = ad_timeout;
++            chk.started = getTimer();
++            chk.showing = false;
++            chk.last_pcnt = 0.0;
++            chk.fadeout_time = fadeout_time;
++
++            chk.fadeFunction = function ():void {
++                var p:Number = 100 * (1 - 
++                    ((getTimer() - this.fadeout_start) / this.fadeout_time));
++                
++                if (p > 0) {
++                    this.parent.alpha = p * 0.01;
++                } else {
++                    var _clip:MovieClip = this.parent.parent;
++                    MochiAd.unload(_clip);
++                    delete this["onEnterFrame"];
++                }
++            };
++
++            mc.unloadAd = function ():void {
++                MochiAd.unload(clip);
++            }
++
++            mc.adjustProgress = function (msec:Number):void {
++                var _chk:Object = mc._mochiad_wait;
++                _chk.server_control = true;
++                _chk.started = getTimer();
++                _chk.ad_msec = msec;
++            };
++
++            chk["onEnterFrame"] = function ():void {
++                var _clip:Object = this.parent.parent.root;
++				if (!_clip) {
++					delete this["onEnterFrame"];
++					return;
++				}
++                var ad_clip:Object = this.parent._mochiad_ctr;
++                var elapsed:Number = getTimer() - this.started;
++                var finished:Boolean = false;
++                var clip_total:Number = _clip.loaderInfo.bytesTotal;
++                var clip_loaded:Number = _clip.loaderInfo.bytesLoaded;
++                var clip_pcnt:Number = (100.0 * clip_loaded) / clip_total;
++                var ad_pcnt:Number = (100.0 * elapsed) / chk.ad_msec;
++                var _inside:Object = this._mochiad_bar._inside;
++                var pcnt:Number = Math.min(100.0, Math.min((clip_pcnt || 0.0), ad_pcnt));
++                pcnt = Math.max(this.last_pcnt, pcnt);
++                this.last_pcnt = pcnt;
++                _inside.scaleX = pcnt * 0.01;
++            
++                if (!chk.showing) {
++                    var total:Number = ad_clip.loaderInfo.bytesTotal;
++                    if (total > 0 || typeof(total) == "undefined") {
++                        chk.showing = true;
++                        chk.started = getTimer();
++                    } else if (elapsed > chk.ad_timeout) {
++                        finished = true;
++                    }
++                }
++                if (elapsed > chk.ad_msec || this.parent._mochiad_ctr_failed) {
++                    finished = true;
++                }
++                if (clip_total > 0 && clip_loaded >= clip_total && finished) {
++                    if (this.server_control) {
++                        delete this.onEnterFrame;
++                    } else {
++                        this.fadeout_start = getTimer();
++                        this.onEnterFrame = chk.fadeFunction;
++                    }
++                }
++            };
++            doOnEnterFrame(chk);
++        }
++    
++        public static function showTimedAd(options:Object):void {
++            /*
++                This function will stop the clip, load the MochiAd in a
++                centered position on the clip, and then resume the clip
++                after a timeout.
++
++                options:
++                    An object with keys and values to pass to the server.
++                    These options will be passed to MochiAd.load, but the
++                    following options are unique to showTimedAd.
++
++                    clip is a MovieClip reference to place the ad in.
++
++                    ad_timeout is the number of milliseconds to wait
++                    for the ad to start loading (default: 2000).
++
++                    fadeout_time is the number of milliseconds to
++                    fade out the ad upon completion (default: 250).
++            */
++            var DEFAULTS:Object = {
++                ad_timeout: 2000,
++                fadeout_time: 250,
++                regpt: "o",
++                method: "showTimedAd",
++                ad_started: function ():void { this.clip.stop(); },
++                ad_finished: function ():void { this.clip.play(); }
++            };
++            options = MochiAd._parseOptions(options, DEFAULTS);
++
++            var clip:Object = options.clip;
++            var ad_msec:Number = 11000;
++            var ad_timeout:Number = options.ad_timeout;
++            delete options.ad_timeout;
++            var fadeout_time:Number = options.fadeout_time;
++            delete options.fadeout_time;
++
++            if (!MochiAd.load(options)) {
++                options.ad_finished();
++                return;
++            }
++
++            options.ad_started();
++        
++            var mc:MovieClip = clip._mochiad;
++            mc["onUnload"] = function ():void {
++                options.ad_finished();
++            }
++
++
++            /* Center the clip */
++            var wh:Array = MochiAd._getRes(options, clip);
++            var w:Number = wh[0];
++            var h:Number = wh[1];
++            mc.x = w * 0.5;
++            mc.y = h * 0.5;
++        
++            var chk:MovieClip = createEmptyMovieClip(mc, "_mochiad_wait", 3);
++            chk.ad_msec = ad_msec;
++            chk.ad_timeout = ad_timeout;
++            chk.started = getTimer();
++            chk.showing = false;
++            chk.fadeout_time = fadeout_time;
++            chk.fadeFunction = function ():void {
++                var p:Number = 100 * (1 - 
++                    ((getTimer() - this.fadeout_start) / this.fadeout_time));
++                if (p > 0) {
++                    this.parent.alpha = p * 0.01;
++                } else {
++                    var _clip:MovieClip = this.parent.parent;
++                    MochiAd.unload(_clip);
++                    delete this["onEnterFrame"];
++                }
++            };
++
++            mc.unloadAd = function ():void {
++                MochiAd.unload(clip);
++            }
++            
++            mc.adjustProgress = function (msec:Number):void {
++                var _chk:Object = mc._mochiad_wait;
++                _chk.server_control = true;
++                _chk.started = getTimer();
++                _chk.ad_msec = msec - 250;
++            };
++
++            chk["onEnterFrame"] = function ():void {
++                var ad_clip:Object = this.parent._mochiad_ctr;
++                var elapsed:Number = getTimer() - this.started;
++                var finished:Boolean = false;
++                if (!chk.showing) {
++                    var total:Number = ad_clip.loaderInfo.bytesTotal;
++                    if (total > 0 || typeof(total) == "undefined") {
++                        chk.showing = true;
++                        chk.started = getTimer();
++                    } else if (elapsed > chk.ad_timeout) {
++                        finished = true;
++                    }
++                }
++                if (elapsed > chk.ad_msec || this.parent._mochiad_ctr_failed) {
++                    finished = true;
++                }
++                if (finished) {
++                    if (this.server_control) {
++                        delete this.onEnterFrame;
++                    } else {
++                        this.fadeout_start = getTimer();
++                        this.onEnterFrame = this.fadeFunction;
++                    }
++                }
++            };
++            doOnEnterFrame(chk);
++
++
++        }
++
++        public static function _allowDomains(server:String):String {
++            var hostname:String = server.split("/")[2].split(":")[0];
++            flash.system.Security.allowDomain("*");
++            flash.system.Security.allowDomain(hostname);
++            flash.system.Security.allowInsecureDomain("*");
++            flash.system.Security.allowInsecureDomain(hostname);
++            return hostname;
++        }
++        
++        public static function _loadCommunicator(options:Object):MovieClip {
++            var DEFAULTS:Object = {
++                com_server: "http://x.mochiads.com/com/1/",
++                method: "loadCommunicator",
++                depth: 10337,
++                id: "_UNKNOWN_"
++            };
++            options = MochiAd._parseOptions(options, DEFAULTS);
++            options.swfv = 9;
++            options.mav = MochiAd.getVersion();
++
++            var clip:Object = options.clip;
++            var clipname:String = '_mochiad_com_' + options.id;
++
++            if (!MochiAd._isNetworkAvailable()) {
++                return null;
++            }
++
++            if (clip[clipname]) {
++                return clip[clipname];
++            }
++
++            var server:String = options.com_server + options.id;
++            MochiAd._allowDomains(server);
++            delete options.id;
++            delete options.com_server;
++
++            var depth:Number = options.depth;
++            delete options.depth;
++            var mc:MovieClip = createEmptyMovieClip(clip, clipname, depth);
++            var lv:URLVariables = new URLVariables();
++            for (var k:String in options) {
++                lv[k] = options[k];
++            }
++
++            var lc:LocalConnection = new LocalConnection();
++            lc.client = mc;
++            var name:String = [
++                "", Math.floor((new Date()).getTime()), Math.floor(Math.random() * 999999)
++            ].join("_");
++            lc.allowDomain("*", "localhost");
++            lc.allowInsecureDomain("*", "localhost");
++            lc.connect(name);
++            mc.name = name;
++            mc.lc = lc;
++            lv.lc = name;
++            mc._id = 0;
++            mc._queue = [];
++            mc.rpcResult = function (cb:Object):void {
++                cb = parseInt(cb.toString());
++                var cblst:Array = mc._callbacks[cb];
++                if (typeof(cblst) == 'undefined') {
++                    return;
++                }
++                delete mc._callbacks[cb];
++                var args:Array = [];
++                for (var i:Number = 2; i < cblst.length; i++) {
++                    args.push(cblst[i]);
++                }
++                for (i = 1; i < arguments.length; i++) {
++                    args.push(arguments[i]);
++                }
++                var method:Object = cblst[1];
++                var obj:Object = cblst[0];
++                if (obj && typeof(method) == 'string') {
++                    method = obj[method];
++                }
++                if (typeof(method) == 'function') {
++                    method.apply(obj, args);
++                }
++            }
++            mc._didConnect = function (endpoint:String):void {
++                mc._endpoint = endpoint;
++                var q:Array = mc._queue;
++                delete mc._queue;
++                var ds:Function = mc.doSend;
++                for (var i:Number = 0; i < q.length; i++) {
++                    var item:Array = q[i];
++                    ds.apply(this, item);
++                }
++            }
++            mc.doSend = function (args:Array, cbobj:Object, cbfn:Object):void {
++                if (mc._endpoint == null) {
++                    var qargs:Array = [];
++                    for (var i:Number = 0; i < arguments.length; i++) {
++                        qargs.push(arguments[i]);
++                    }
++                    mc._queue.push(qargs);
++                    return;
++                }
++                mc._id += 1;
++                var id:Number = mc._id;
++                mc._callbacks[id] = [cbobj, cbfn || cbobj];
++                var slc:LocalConnection = new LocalConnection();
++                slc.send(mc._endpoint, 'rpc', id, args);
++            }
++            mc._callbacks = {};
++            mc._callbacks[0] = [mc, '_didConnect'];
++
++            lv.st = getTimer();
++            var req:URLRequest = new URLRequest(server + ".swf");
++            req.contentType = "application/x-www-form-urlencoded";
++            req.method = URLRequestMethod.POST;
++            req.data = lv;
++            var loader:Loader = new Loader();
++            loader.load(req);
++            mc.addChild(loader);
++            mc._mochiad_com = loader;
++
++            return mc;
++
++        }
++
++        public static function fetchHighScores(options:Object, callbackObj:Object, callbackMethod:Object=null):Boolean {
++            /*
++                Fetch the high scores from MochiAds. Returns false if a connection
++                to MochiAds can not be established due to the security sandbox.
++
++                options:
++                    An object with keys and and values to pass to the
++                    server.
++
++                    clip is a MovieClip reference to place the (invisible)
++                    communicator in.
++
++                    id should be the unique identifier for this MochiAd.
++
++                callback(scores):
++
++                    scores is an array of at most 50 high scores, highest score
++                    first, with a millisecond epoch timestamp (for the Date
++                    constructor).  [[name, score, timestamp], ...]
++            */
++            var lc:MovieClip = MochiAd._loadCommunicator({clip: options.clip, id: options.id});
++            if (!lc) {
++                return false;
++            }
++            lc.doSend(['fetchHighScores', options], callbackObj, callbackMethod);
++            return true;
++        }
++
++
++        public static function sendHighScore(options:Object, callbackObj:Object, callbackMethod:Object=null):Boolean {
++            /*
++                Send a high score to MochiAds. Returns false if a connection
++                to MochiAds can not be established due to the security sandbox.
++
++                options:
++                    An object with keys and and values to pass to the
++                    server.
++
++                    clip is a MovieClip reference to place the (invisible)
++                    communicator in.
++
++                    id should be the unique identifier for this MochiAd.
++
++                    name is the name to be associated with the high score, e.g.
++                    "Player Name"
++
++                    score is the value of the high score, e.g. 100000.
++
++                callback(scores, index):
++
++                    scores is an array of at most 50 high scores, highest score
++                    first, with a millisecond epoch timestamp (for the Date
++                    constructor).  [[name, score, timestamp], ...]
++
++                    index is the array index of the submitted high score in
++                    scores, or -1 if the submitted score did not rank top 50.
++            */
++            var lc:MovieClip = MochiAd._loadCommunicator({clip: options.clip, id: options.id});
++            if (!lc) {
++                return false;
++            }
++            lc.doSend(['sendHighScore', options], callbackObj, callbackMethod);
++            return true;
++        }        
++
++        public static function load(options:Object):MovieClip {
++            /*
++                Load a MochiAd into the given MovieClip
++            
++                options:
++                    An object with keys and values to pass to the server.
++
++                    clip is a MovieClip reference to place the ad in.
++
++                    id should be the unique identifier for this MochiAd.
++
++                    server is the base URL to the MochiAd server.
++
++                    res is the resolution of the container clip or movie
++                    as a string, e.g. "500x500"
++
++                    no_page disables page detection.
++            */
++            var DEFAULTS:Object = {
++                server: "http://x.mochiads.com/srv/1/",
++                method: "load",
++                depth: 10333,
++                id: "_UNKNOWN_"
++            };
++            options = MochiAd._parseOptions(options, DEFAULTS);
++            // This isn't accessible yet for some reason:
++            // options.clip.loaderInfo.swfVersion;
++            options.swfv = 9;
++            options.mav = MochiAd.getVersion();
++
++            var clip:Object = options.clip;
++
++            if (!MochiAd._isNetworkAvailable()) {
++                return null;
++            }
++        
++            if (clip._mochiad_loaded) {
++                return null;
++            }
++
++            var depth:Number = options.depth;
++            delete options.depth;
++            var mc:MovieClip = createEmptyMovieClip(clip, "_mochiad", depth);
++        
++            var wh:Array = MochiAd._getRes(options, clip);
++            options.res = wh[0] + "x" + wh[1];
++
++            options.server += options.id;
++            delete options.id;
++
++            clip._mochiad_loaded = true;
++
++            var lv:URLVariables = new URLVariables();
++            for (var k:String in options) {
++                var v:Object = options[k];
++                if (!(v is Function)) {
++                    lv[k] = v;
++                }
++            }
++            if (clip.loaderInfo.loaderURL.indexOf("http") != 0) {
++                options.no_page = true;
++            }
++
++            var server:String = lv.server;
++            delete lv.server;
++            var hostname:String = _allowDomains(server);
++
++            mc["onEnterFrame"] =  function ():void {
++                if (!this._mochiad_ctr) {
++                    delete this["onEnterFrame"];
++                    MochiAd.unload(this.parent);
++                };
++            };
++            doOnEnterFrame(mc);
++
++            var lc:LocalConnection = new LocalConnection();
++            lc.client = mc;
++            var name:String = [
++                "", Math.floor((new Date()).getTime()), Math.floor(Math.random() * 999999)
++            ].join("_");
++            lc.allowDomain("*", "localhost");
++            lc.allowInsecureDomain("*", "localhost");
++            lc.connect(name);
++            mc.lc = lc;
++            lv.lc = name;
++            
++            lv.st = getTimer();
++            var loader:Loader = new Loader();
++            
++            var f:Function = function (ev:Object):void {
++                mc._mochiad_ctr_failed = true;
++            }
++            loader.contentLoaderInfo.addEventListener(IOErrorEvent.IO_ERROR, f);
++            
++            var req:URLRequest = new URLRequest(server + ".swf");
++            req.contentType = "application/x-www-form-urlencoded";
++            req.method = URLRequestMethod.POST;
++            req.data = lv;
++            loader.load(req);
++            mc.addChild(loader);
++            mc._mochiad_ctr = loader;
++            
++        
++            return mc;
++        }
++
++        public static function unload(clip:Object):Boolean {
++            /*
++                Unload a MochiAd from the given MovieClip
++            
++                    clip:
++                        a MovieClip reference (e.g. this.stage)
++            */
++            if (clip.clip && clip.clip._mochiad) {
++                clip = clip.clip;
++            }
++            if (!clip._mochiad) {
++                return false;
++            }
++            if (clip._mochiad.onUnload) {
++                clip._mochiad.onUnload();
++            }
++            clip.removeChild(clip._mochiad);
++            delete clip._mochiad_loaded;
++            delete clip._mochiad;
++            return true;
++        }
++
++        public static function _isNetworkAvailable():Boolean {
++            return Security.sandboxType != "localWithFile";
++        }
++    
++        public static function _getRes(options:Object, clip:Object):Array {
++            var b:Object = clip.getBounds(clip.root);
++            var w:Number = 0;
++            var h:Number = 0;
++            if (typeof(options.res) != "undefined") {
++                var xy:Array = options.res.split("x");
++                w = parseFloat(xy[0]);
++                h = parseFloat(xy[1]);
++            } else {
++                w = b.xMax - b.xMin;
++                h = b.yMax - b.yMin;
++            }
++            if (w == 0 || h == 0) {
++                w = clip.stage.stageWidth;
++                h = clip.stage.stageHeight;
++            }
++
++
++            return [w, h];
++        }
++
++        public static function _parseOptions(options:Object, defaults:Object):Object {
++            var optcopy:Object = {};
++            var k:String;
++            for (k in defaults) {
++                optcopy[k] = defaults[k];
++            }
++            if (options) {
++                for (k in options) {
++                    optcopy[k] = options[k];
++                }
++            }
++            options = optcopy.clip.loaderInfo.parameters.mochiad_options;
++            if (options) {
++                var pairs:Array = options.split("&");
++                for (var i:Number = 0; i < pairs.length; i++) {
++                    var kv:Array = pairs[i].split("=");
++                    optcopy[unescape(kv[0])] = unescape(kv[1]);
++                }
++            }
++            return optcopy;
++        }
++
++    }
++}
+diff --git a/MyButton.as b/MyButton.as
+new file mode 100644
+index 0000000..b2c0d31
+--- /dev/null
++++ b/MyButton.as
+@@ -0,0 +1,84 @@
++package
++{
++	import flash.geom.Rectangle;
++	import flash.events.MouseEvent;
++	import com.jxl.diesel.view.core.BitmapSpriteDisplayObject;
++	import flash.events.Event;
++	import flash.geom.Point;
++	import flash.display.Stage;
++	public class MyButton
++	{
++		private var downImage:Image;
++		private var upImage:Image;
++		private var isDown:Boolean;
++		private var rect:Rectangle;
++		private var clicked:Boolean;
++		private var show:Boolean;
++		private var bsdoRef:BitmapSpriteDisplayObject;
++		
++		public function Show() {
++			show = true;
++		}
++		public function Hide() {
++			show = false;
++			
++		}
++		public function MyButton(rectangle:Rectangle, dImage:Class, uImage:Class, bsdo:BitmapSpriteDisplayObject) {
++			
++			bsdoRef = bsdo;
++			rect = rectangle;
++			isDown = false;
++			downImage = new Image(dImage,bsdo);
++			upImage = new Image(uImage, bsdo);
++			downImage.move(-900,-900);
++			upImage.move(-900,-900);
++			clicked = false;
++			show = false;
++		}
++		public function onMouseDown( event: MouseEvent ): void {
++			if (rect.contains(event.stageX,event.stageY))
++				isDown = true;
++			else
++				isDown = false;
++		}
++		public function onMouseUp( event: MouseEvent ): void {
++			isDown = false;
++		}
++		public function onMouseMove(event:MouseEvent):void {
++			if (!rect.contains(event.stageX,event.stageY))
++				isDown = false;	
++			
++		}
++		public function onEnterFrame(event:Event):void {
++			if (!show)
++				return;
++			if (isDown)
++				bsdoRef.bitmapData.copyPixels(downImage.bitmap.bitmapData,new Rectangle(0,0,rect.width,rect.height),new Point(rect.x, rect.y),null,null,true);
++			else
++				bsdoRef.bitmapData.copyPixels(upImage.bitmap.bitmapData,new Rectangle(0,0,rect.width,rect.height),new Point(rect.x, rect.y),null,null,true);
++		}
++		public function onMouseClick(event:MouseEvent):void {
++			if (!show)
++				return;
++			if (rect.contains(event.stageX,event.stageY))
++				clicked = true;
++			else
++				clicked = false;
++		}
++		public function isClicked():Boolean {
++			if (clicked) {
++				clicked = false
++				return true;
++			} else
++				return false;
++		}
++		public function addListeners(stage:Stage):void {
++			stage.addEventListener(MouseEvent.MOUSE_DOWN,onMouseDown);
++			stage.addEventListener(MouseEvent.MOUSE_UP,onMouseUp);
++			stage.addEventListener(MouseEvent.MOUSE_MOVE,onMouseMove);
++			stage.addEventListener(MouseEvent.CLICK,onMouseClick);
++			stage.addEventListener(Event.ENTER_FRAME,onEnterFrame);
++			
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/Particle.as b/Particle.as
+new file mode 100644
+index 0000000..ac76082
+--- /dev/null
++++ b/Particle.as
+@@ -0,0 +1,27 @@
++package
++{
++	public class Particle
++	{
++		public var sx: Number;
++		public var sy: Number;
++
++		public var vx: Number;
++		public var vy: Number;
++		
++		public var energie: Number;
++		public var energieDamp: Number;
++		
++		public function Particle( sx: Number, sy: Number, vx: Number, vy: Number, energie: Number, energieDamp: Number )
++		{
++			this.sx = sx;
++			this.sy = sy;
++			
++			this.vx = vx;
++			this.vy = vy;
++
++			this.energie = energie;			
++			this.energieDamp = energieDamp;
++		}
++
++	}
++}
+\ No newline at end of file
+diff --git a/Pixel.as b/Pixel.as
+new file mode 100644
+index 0000000..eccb9a1
+--- /dev/null
++++ b/Pixel.as
+@@ -0,0 +1,25 @@
++package
++{
++	public class Pixel
++	{
++		public var sx: Number;
++		public var sy: Number;
++		public var tx: Number;
++		public var ty: Number;
++		
++		public var vx: Number;
++		public var vy: Number;
++		
++		public var color: int;
++		
++		public function Pixel( sx: Number, sy: Number, color: uint = 0xffffffff )
++		{
++			this.sx = tx = sx;
++			this.sy = ty = sy;
++			
++			vx = vy = 0;
++			
++			this.color = color;
++		}
++	}
++}
+\ No newline at end of file
+diff --git a/Preloader.as b/Preloader.as
+new file mode 100644
+index 0000000..a5e498c
+--- /dev/null
++++ b/Preloader.as
+@@ -0,0 +1,47 @@
++package {
++    import flash.display.DisplayObject;
++    import flash.display.MovieClip;
++    import flash.utils.getDefinitionByName;
++
++    // Must be dynamic!
++    public dynamic class Preloader extends MovieClip {
++        // Keep track to see if an ad loaded or not
++        private var did_load:Boolean;
++
++        // Change this class name to your main class
++        public static var MAIN_CLASS:String = "stickyblocks";
++
++        // Substitute these for what's in the MochiAd code
++        public static var GAME_OPTIONS:Object = {id: "1fa7ef43e97f79f9", res:"640x480"};
++
++        public function Preloader() {
++            super();
++
++            var opts:Object = {};
++            for (var k:String in GAME_OPTIONS) {
++                opts[k] = GAME_OPTIONS[k];
++            }
++
++            opts.ad_started = function ():void {
++                did_load = true;
++            }
++
++            opts.ad_finished = function ():void {
++                // don't directly reference the class, otherwise it will be
++                // loaded before the preloader can begin
++                var mainClass:Class = Class(getDefinitionByName(MAIN_CLASS));
++                var app:Object = new mainClass();
++                parent.addChild(app as DisplayObject);
++                if (app.init) {
++                    app.init(did_load);
++                }
++            }
++
++            opts.clip = this;
++            MochiAd.showPreloaderAd(opts);
++        }
++
++
++    }
++
++}
+diff --git a/stickyblocks.as b/stickyblocks.as
+new file mode 100644
+index 0000000..2bdd32c
+--- /dev/null
++++ b/stickyblocks.as
+@@ -0,0 +1,1885 @@
++
++package
++{
++	import com.senocular.utils.KeyObject;
++	import com.hexagonstar.util.debug.Debug;
++	import flash.display.Bitmap;
++	import flash.display.BitmapData;
++	import flash.display.Sprite;
++	import flash.events.Event;
++	import flash.utils.Timer;
++	import flash.events.TimerEvent;
++	import flash.filters.BlurFilter;
++	import flash.filters.ColorMatrixFilter;
++	import flash.geom.Point;
++	import flash.geom.ColorTransform;
++	import flash.display.BlendMode;
++	import flash.events.MouseEvent;
++	import de.polygonal.ds.*;
++	import flash.display.Sprite;
++	import flash.display.StageScaleMode;
++	import flash.display.StageAlign;
++	import flash.display.Graphics;
++	import flash.ui.Keyboard;
++	import flash.events.Event;
++	import flash.events.KeyboardEvent;
++	import flash.geom.Rectangle;
++	import flash.net.SharedObject;
++	import flash.display.Loader;
++	import com.jxl.util.LoaderQueue;
++	import flash.net.URLRequest;
++	import com.jxl.battlefield.model.MDArray;
++	import com.jxl.battlefield.view.CharacterSprite;
++	import com.jxl.diesel.view.core.BitmapSprite;
++	import com.jxl.battlefield.view.DefaultTileMap;
++	import com.jxl.battlefield.view.SpriteMap;
++	import com.jxl.battlefield.view.WalkableMap;
++	import com.jxl.diesel.view.core.BitmapSpriteDisplayObject;
++	import flash.display.BitmapData;
++	import flash.display.Bitmap;
++	import Image;
++	import flash.display.BitmapDataChannel;
++	import flash.utils.ByteArray;
++	import flash.media.Sound;
++	import flash.text.Font;
++	import flash.text.*;
++	import flash.filters.*;
++	import mx.core.SoundAsset;
++	import flash.geom.Matrix;
++	import zeuslabs.particles.*;
++	import flash.net.*;
++	//[Frame(factoryClass="Preloader")]
++	[SWF( backgroundColor='0x121212', frameRate='35', width='320', height='240')]
++	
++	public dynamic class stickyblocks extends Sprite
++	{
++
++		private var glow:GlowFilter;
++		[Embed(source="Leaves.swf",symbol="greenleaf")]
++		public static var GreenLeaf:Class;
++		[Embed(source="Leaves.swf",symbol="brownleaf")]
++		public static var BrownLeaf:Class;
++		private var clone:BitmapData;
++		private var system:ParticleSystem;
++		private var swap_counter:int = 0;
++		// constants
++		private const TITLESCREEN:int = 0;
++		private const LEVELSELECT:int = 1;
++		private const GAME:int = 2;
++		private const INSTRUCTIONS:int = 3;
++		private const CREDITS:int = 4;
++		private const TRANSITION:int = 5;
++		private var transitionOverride:Boolean = false;
++		private var fps:FPS;
++		private var realTimer:Timer;
++		private var moves:int = 0;
++		private var showTimerExpiredScreen:int = 0;
++		var gameplayBackgroundBitmap:Bitmap;
++		var gameplayBackgroundSprite:BitmapSprite;
++		[Embed(source="art/click.mp3")]
++		public var c_click:Class;
++		[Embed(source="art/click2.mp3")]
++		public var c_click2:Class;
++		[Embed(source="art/winner.mp3")]
++		public var c_winner:Class;
++		[Embed(source="levels.dat", mimeType="application/octet-stream")]
++		public var b_map:Class;
++		[Embed(source="art/controls.png")]
++		public var c_controls:Class;
++		[Embed(source="art/cube.png")]
++		public var c_cube:Class;
++		[Embed(source="art/smallcube.png")]
++		public var c_smallcube:Class;
++		[Embed(source="art/blocks.png")]
++		public var c_blocks:Class;
++		[Embed(source="art/blocks2.png")]
++		public var c_blocks2:Class;
++		//[Embed(source="art/gameplay.png")]
++		//public var c_gameplayBackground:Class;
++		[Embed(source="art/grass2.png")]
++		public var c_levelselectBackground:Class;
++		//[Embed(source="art/titlescreen.png")]
++		//public var c_titlescreen:Class;
++		//[Embed(source="art/levels1.png")]
++		//public var c_levels1:Class;
++		//[Embed(source="art/levels2.png")]
++		//public var c_levels2:Class;
++		//[Embed(source="art/levels3.png")]
++		//public var c_levels3:Class;
++		//[Embed(source="art/levels4.png")]
++		//public var c_levels4:Class;
++		[Embed(source="art/leftarrow.png")]
++		public var c_leftarrow:Class;
++		[Embed(source="art/leftarrowdown.png")]
++		public var c_leftarrowdown:Class;
++		//[Embed(source="art/credits.png")]
++		//public var c_credits:Class;
++		//[Embed(source="art/creditsdown.png")]
++		//public var c_creditsdown:Class;
++		//[Embed(source="art/quit.png")]
++		//public var c_quit:Class;
++		//[Embed(source="art/quitdown.png")]
++		//public var c_quitdown:Class;
++		[Embed(source="art/rightarrow.png")]
++		public var c_rightarrow:Class;
++		[Embed(source="art/rightarrowdown.png")]
++		public var c_rightarrowdown:Class;
++		[Embed(source="art/backtotitlescreendown.png")]
++		public var c_backtotitlescreendown:Class;
++		[Embed(source="art/backtotitlescreen.png")]
++		public var c_backtotitlescreen:Class;
++		[Embed(source="art/nextlevel.png")]
++		public var c_nextlevel:Class;
++		[Embed(source="art/nextleveldown.png")]
++		public var c_nextleveldown:Class;
++		[Embed(source="art/start.png")]
++		public var c_start:Class;
++		[Embed(source="art/startdown.png")]
++		public var c_startdown:Class;
++		//[Embed(source="art/instructions.png")]
++		//public var c_instructions:Class;
++		[Embed(source="art/startgame.png")]
++		public var c_startgame:Class;
++		[Embed(source="art/startgamedown.png")]
++		public var c_startgamedown:Class;
++		[Embed(source="art/undo.png")]
++		public var c_undo:Class;
++		[Embed(source="art/undodown.png")]
++		public var c_undodown:Class;
++		[Embed(source="art/reset.png")]
++		public var c_reset:Class;
++		[Embed(source="art/resetdown.png")]
++		public var c_resetdown:Class;
++		[Embed(source="art/binstructions.png")]
++		public var c_binstructions:Class;
++		[Embed(source="art/binstructionsdown.png")]
++		public var c_binstructionsdown:Class;
++		[Embed(source="art/control1.png")]
++		public var c_control1:Class;
++		[Embed(source="art/control2.png")]
++		public var c_control2:Class;
++		[Embed(source="art/font.ttf", fontName="Cooper")]		
++		public var font:String;
++		[Embed(source="art/casper.ttf", fontName="Casper")]
++		public var font2:String;
++		[Embed(source="art/arrowkeys.png")]
++		public var c_arrowkeys:Class;
++		[Embed(source="art/arrow.png")]
++		public var c_arrow:Class;
++		public var key:KeyObject = new KeyObject(stage);
++		private var font_format2:TextFormat;
++		private var ff:TextFormat;
++		private var txt2:TextField;
++		private var t_thanksforplaying:TextField;
++		private var t_jellyblocks:TextField;
++		private var congratsArray:Array;
++		private var transitionCounter:int = 0;
++		private var t_instructions:TextField;
++		private var f_font2:Font;
++		private var t_goal:TextField;
++		private var t_control:TextField;
++		private var t_creditsText:TextField;
++		private var t_same:TextField;
++		private var font_format:TextFormat;
++		private var txt:TextField;
++		private var t_progress:TextField;
++		private var t_credits:TextField;
++		private var t_levelselect:TextField;
++		private var clickSound:Sound;
++		private var winnerSound:Sound;
++		private var click2Sound:Sound;
++		private var f_font:Font;
++		private var t_solvedpuzzle:TextField;
++		private var t_level:TextField;
++		private var t_level2:TextField;
++		private var t_jellyblockscom:TextField;
++		private var mySo:SharedObject;
++		
++		private var b_backtotitlescreen:MyButton;
++		private var b_leftarrow:MyButton;
++		private var b_rightarrow:MyButton;
++		private var b_start:MyButton;
++		private var b_undoButton:MyButton;
++		private var b_resetButton:MyButton;
++		private var b_startgame:MyButton;
++		private var b_instructions:MyButton;
++//		private var b_quit:MyButton; 
++		private var b_nextlevel:MyButton;
++		//private var b_credits:MyButton;
++		private var i_control1:Image;
++		private var i_control2:Image;
++		// images
++		private var i_controls:Image;
++		private var i_blocks:Image;
++		private var i_blocks2:Image;
++		private var i_gameplaybackground:Image;
++		//private var i_titlescreen:Image;
++		private var i_levelselectbackground:Image;
++		private var i_levels1:Image
++		private var i_levels2:Image
++		private var i_levels3:Image
++		private var i_levels4:Image
++		private var i_cube:Image;
++		private var i_arrowkeys:Image;
++		private var i_smallcube:Image;
++		private var i_arrow:Image;
++		private var levelPreview:int = 0;
++		private var mouseDown: Boolean;
++		var bsdo:BitmapSpriteDisplayObject;
++		private var timer:int = 0;
++		private var t_timerText:TextField;
++		private var t_timerExpired:TextField;
++		private var completePuzzleSequence:int = 0;
++		private var gamestate:int; 
++		private var congratsMovement:Array;
++		//mouse
++		private var mousex:int;
++		private var mousey:int;
++		private var clone2:BitmapSpriteDisplayObject;
++		// levels
++		private var levels:Array3;
++		private var undoBackup:Array3;
++		private var currentLevel:int = 0;
++		private var levelselectedx:int = 0;
++		private var levelselectedy:int = 0;
++		
++		//what does this do?  keep track of level data
++		private var leveltagged:Array2;
++		private var level:Array2;
++		private var transitionlevel:Array2;
++		
++		private var completedLevels:Array;
++		
++		//input keys
++		private var keyF1Pressed:Boolean = false;
++		private var keyF1Toggle:Boolean = false;
++		private var keyF2Pressed:Boolean = false;
++		private var keyF2Toggle:Boolean = false;
++		private var keyF3Pressed:Boolean = false;
++		private var keyF3Toggle:Boolean = false;
++		private var keyF4Pressed:Boolean = false;
++		private var keyF4Toggle:Boolean = false;
++		
++		private var keyUpPressed:Boolean = false;
++		private var keyUpToggle:Boolean = false;
++		private var keyDownPressed:Boolean = false;
++		private var keyDownToggle:Boolean = false;
++		private var keyRightPressed:Boolean = false;
++		private var keyRightToggle:Boolean = false;
++		private var keyLeftPressed:Boolean = false;
++		private var keyLeftToggle:Boolean = false;
++		private var keyRPressed:Boolean = false;
++		private var keyRToggle:Boolean = false;
++		private var keyUPressed:Boolean = false;
++		private var keyUToggle:Boolean = false;
++		private var keyEnterPressed:Boolean = false;
++		private var keyEnterToggle:Boolean = false;
++		private var mousePressed:Boolean = false;
++		private var mouseToggle:Boolean = false;
++		private var keyCounter:int = 0;
++		private var beforeState:int;
++		private var afterState:int;
++		
++		// filters
++		private	var bevel:BevelFilter = new BevelFilter(4, 45, 0x99CCFF, 1, 0x003399, 1, 10, 10, 2, 3);
++		//private var colorfilter:ColorMatrixFilter = new ColorMatrixFilter(new Matrix(
++		// is puzzle completed
++		private var completePuzzle:Boolean = false;
++		private var timerExpired:Boolean = false;
++		private const WIDTH: int = 640;
++		private const HEIGHT: int = 480;
++		
++		private const ORIGIN: Point = new Point();
++		
++		//-- APPEARANCE
++		private const EXPLOSION_BLUR_STRENGTH: int = 2;
++		private const EXPLOSION_BLUR_QUALITY: int = 1;
++		
++		private var blur: BlurFilter;
++		
++		private var buffer: BitmapData;
++		private var output: BitmapData;                                                                                                                                                                                                                                                                                   
++		private var temp:BitmapData;
++		private var explosions: Array;
++		private var fireColors: Array;
++		private var whichColor:int = 0;
++		private var keysDown:Array = new Array();
++		
++		function addKey(e:KeyboardEvent):void {
++		    keysDown[e.keyCode] = true;
++		}
++		function removeKey(e:KeyboardEvent):void {
++		    keysDown[e.keyCode] = false;
++		}
++		// here's how you'd implement it:
++		var t:Timer = new Timer(25);
++		
++		function tick(e:TimerEvent):void {
++		    // old way- if (Key.isDown(Key.RIGHT)) {
++		    if (keysDown[Keyboard.RIGHT]) {
++		        trace("right key is down!");
++		    }
++		    // etc.
++		}
++		public function CreditsRender(bsdo:BitmapSpriteDisplayObject) {
++			b_backtotitlescreen.Show();
++			bsdo.bitmapData.copyPixels(i_levelselectbackground.bitmap.bitmapData, new Rectangle(0,0,320,240),new Point(0,0),null,null,null);
++			t_credits.visible = true;
++			t_creditsText.visible = true;
++			
++		}
++		public function Credits() {
++			CreditsRender(bsdo);
++			
++			if (b_backtotitlescreen.isClicked()) {
++				b_backtotitlescreen.Hide();
++				t_credits.visible = false;
++				gamestate = TITLESCREEN;
++				t_creditsText.visible = false;
++				return;
++			}
++		}
++		public function InstructionsRender(bsdo:BitmapSpriteDisplayObject) {
++			bsdo.bitmapData.copyPixels(i_levelselectbackground.bitmap.bitmapData, new Rectangle(0,0,320,240),new Point(0,0),null,null,null);
++			bsdo.bitmapData.copyPixels(i_arrowkeys.getBitmap().bitmapData,new Rectangle(0,0,110,74),new Point(200,120),null,new Point(0,0),1);
++			bsdo.bitmapData.copyPixels(i_arrow.getBitmap().bitmapData,new Rectangle(0,0,40,18),new Point(131,57),null,new Point(0,0),1);
++			bsdo.bitmapData.copyPixels(i_arrow.getBitmap().bitmapData,new Rectangle(0,0,40,18),new Point(131,192),null,new Point(0,0),1);
++			
++			if (swap_counter <= 40) {
++				bsdo.bitmapData.copyPixels(i_control1.bitmap.bitmapData, new Rectangle(0,0,49,49),new Point(140,115),null,null,null);
++				bsdo.bitmapData.colorTransform(new Rectangle(200,138,18,18),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));					
++			}
++			else {
++				bsdo.bitmapData.copyPixels(i_control2.bitmap.bitmapData, new Rectangle(0,0,49,49),new Point(140,115),null,null,null);
++				bsdo.bitmapData.colorTransform(new Rectangle(200+36,138,18,18),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));		
++			}
++				
++			if (swap_counter == 80)
++				swap_counter = 0;
++			swap_counter++;
++			
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(108,36,12,12),new Point(85,53),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(36,36,12,12),new Point(85+12,53),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(72,36,12,12),new Point(85+12+12,53),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(36,36,12,12),new Point(85,53+12),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(72,36,12,12),new Point(85+12,53+12),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(108,36,12,12),new Point(85+24,53+12),null,new Point(0,0),0);
++			
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(84,48,24,12),new Point(190,50),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(120,36,12,12),new Point(190+12,50+12),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(120+12,36,12,12),new Point(190+12,50+12+12),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(48,36,12,12),new Point(190+12+12,50),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(48+12,36,12,12),new Point(190+12+12,50+12),null,new Point(0,0),0);
++			
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(72,36,12,12),new Point(88,185),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(72,36,12,12),new Point(112,185),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(84,48,24,12),new Point(190,185),null,new Point(0,0),0);						
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(108,36,12,12),new Point(190,185+18),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(36,36,12,12),new Point(190+12,185+18),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(108,36,12,12),new Point(87,185+17),null,new Point(0,0),0);
++			bsdo.bitmapData.copyPixels(i_blocks.getBitmap().bitmapData,new Rectangle(36,36,12,12),new Point(87+25,185+17),null,new Point(0,0),0);
++			b_backtotitlescreen.Show();
++			
++			t_control.visible = true;
++			t_goal.visible = true;
++			t_same.visible = true;
++			t_instructions.visible = true;
++			
++		}
++		public function Instructions() {
++			InstructionsRender(bsdo);
++			//// input ////
++			Input(); 
++			if (b_backtotitlescreen.isClicked() || keyF1Toggle) {
++				gamestate = TITLESCREEN;
++				t_control.visible = false;
++				t_goal.visible = false;
++				t_same.visible = false;
++				t_instructions.visible = false;
++				b_backtotitlescreen.Hide();
++			}
++		
++			/// game code ///
++		}
++		
++		public function TitlescreenRender(bsdo:BitmapSpriteDisplayObject) {
++			t_jellyblockscom.visible = true;
++			b_instructions.Show();
++			b_startgame.Show();
++			//b_credits.Show();
++			txt.visible = true;
++			bsdo.bitmapData.copyPixels(i_levelselectbackground.bitmap.bitmapData, new Rectangle(0,0,320,240),new Point(0,0),null,null,null);		
++			bsdo.bitmapData.copyPixels(i_cube.bitmap.bitmapData, new Rectangle(0,0,92,95),new Point(132,108),null,null,true);
++			
++		}
++		public function Titlescreen() {
++			
++			//// input ////
++			Input(); 
++			
++			//goto instructions
++			if (b_instructions.isClicked() || keyF4Toggle) {
++				gamestate = INSTRUCTIONS;
++				b_instructions.Hide();
++				b_startgame.Hide();
++				txt.visible = false;
++				b_instructions.Hide();
++				b_startgame.Hide();
++				//b_credits.Hide();
++				return;
++			}
++			//goto levelselect (MODIFIED: GOTO GAME)
++			if (b_startgame.isClicked() || keyF2Toggle) {
++				// load first level
++				for (var i:int = 0; i < 18; i++) {
++					for (var j:int = 0; j < 18; j++) {
++						level.set(i,j,levels.get(0,i,j));
++					}
++				}
++				i_levelselectbackground.move(0,0);
++				currentLevel = 0;
++				gamestate = GAME;
++				txt.visible = false;
++				b_instructions.Hide();
++				b_startgame.Hide();
++				//b_credits.Hide();
++				timer = 120;
++				showTimerExpiredScreen = 3;
++				timerExpired = false;
++				return;
++			}
++			if (mouseToggle && this.mouseX > t_jellyblockscom.x && this.mouseY > t_jellyblockscom.y && 
++			this.mouseX < t_jellyblockscom.x + 146 && this.mouseY < t_jellyblockscom.y + 13) 
++				callLink();
++			
++			/// game code ///
++			TitlescreenRender(bsdo);
++		}
++		public function LevelSelectRender(bsdo:BitmapSpriteDisplayObject) {
++			t_level.text = "Level " + new int(25*levelPreview + levelselectedx + 5*levelselectedy + 1);
++			t_level.filters = [glow];
++			t_level.visible = true;
++			t_progress.visible = true;
++			t_levelselect.visible = true;
++			b_backtotitlescreen.Show();
++			b_start.Show();
++			bsdo.bitmapData.copyPixels(i_levelselectbackground.bitmap.bitmapData,new Rectangle(0,0,320,240),new Point(0,0),null,null,null);
++			
++			if (mouseToggle && mouseX > 192 && mouseX < 192 + 256 && mouseY > 112 && mouseY < 112 + 256) {
++				var xselect:int = (mouseX - 192) / 51;
++				var yselect:int = (mouseY - 112) / 51;
++				levelselectedx = xselect;
++				levelselectedy = yselect;
++			}
++			bsdo.bitmapData.fillRect(new Rectangle(190 + levelselectedx*52,110 + levelselectedy*52,52,52),0xffff0000);
++			switch (levelPreview) {
++				case 0:
++				bsdo.bitmapData.copyPixels(i_levels1.bitmap.bitmapData,new Rectangle(0,0,258,258),new Point(191,111),null,null,true);
++				break;
++				case 1:
++				bsdo.bitmapData.copyPixels(i_levels2.bitmap.bitmapData,new Rectangle(0,0,258,258),new Point(191,111),null,null,true);
++				break;
++				case 2:
++				bsdo.bitmapData.copyPixels(i_levels3.bitmap.bitmapData,new Rectangle(0,0,258,258),new Point(191,111),null,null,true);
++				break;
++				case 3:
++				bsdo.bitmapData.copyPixels(i_levels4.bitmap.bitmapData,new Rectangle(0,0,258,258),new Point(191,111),null,null,true);
++				break;
++				
++			}
++			for (var i:int = 0; i < 5; i++) {
++				for (var j:int = 0; j < 5; j++) {
++					//var whatLevel = 
++					if (!completedLevels[i + j*5 + 25*levelPreview]) 
++						bsdo.bitmapData.colorTransform(new Rectangle(192 + i*52,112 + j*52,48,48),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));		
++				
++				}
++			}
++			
++		}
++		public function LevelSelect() {
++			
++			Input();
++			
++			LevelSelectRender(bsdo);
++			
++			if (b_start.isClicked()) {
++				t_progress.visible = false;
++				completePuzzle = false;
++				timerExpired = false;
++				if (!completedLevels[levelselectedx + levelselectedy * 5 + levelPreview*25])
++					return;
++				// reset undo
++				completePuzzleSequence = 0;
++				moves = 0;
++				t_levelselect.visible = false;
++				gamestate = GAME;
++				i_levelselectbackground.move(-900,-900);
++				b_start.Hide();
++				b_leftarrow.Hide();
++				b_rightarrow.Hide();
++				b_backtotitlescreen.Hide();
++				currentLevel = 25*levelPreview + levelselectedx + 5*levelselectedy;
++				// load first level
++				for (var i:int = 0; i < 18; i++) {
++					for (var j:int = 0; j < 18; j++) {
++						level.set(i,j,levels.get(0,i,j));
++					}
++				}
++				return;
++			}
++			if (b_backtotitlescreen.isClicked()) {
++				t_progress.visible = false;
++				t_levelselect.visible = false;
++				gamestate = TITLESCREEN;
++				//i_titlescreen.move(0,0);
++				i_levelselectbackground.move(-900,-900);
++				b_start.Hide();
++				b_leftarrow.Hide();
++				b_rightarrow.Hide();
++				b_backtotitlescreen.Hide();
++				system.visible = false;
++				return;
++			}
++			if (b_leftarrow.isClicked()) {
++				levelPreview--;
++			}
++			if (b_rightarrow.isClicked()) {
++				levelPreview++;
++			}
++
++			if (levelPreview == 0) {
++				b_leftarrow.Hide();
++			} else {
++				b_leftarrow.Show();
++			}
++			if (levelPreview == 3) {
++				b_rightarrow.Hide();
++			} else {
++				b_rightarrow.Show();
++			}
++
++			
++		}
++	    public function Input() {
++	    	//Debug.trace(keyCounter);
++	    	
++	    	if (keyCounter > 15) {
++	    		keyCounter = 0;
++	    		keyUpPressed = keyDownPressed = keyLeftPressed = keyRightPressed = false;
++	    	}
++	    	
++	    	keyEnterToggle = false;
++	    	if (keysDown[Keyboard.ENTER]) {
++	    		if (!keyEnterPressed)
++					keyEnterToggle = keyEnterPressed = true;
++			} else 
++				keyEnterPressed = false;
++			
++			
++	    	keyUToggle = false;
++	    	if (keysDown[85]) {
++	    		if (!keyUPressed)
++					keyUToggle = keyUPressed = true;
++			} else 
++				keyUPressed = false;
++			keyF1Toggle = false;
++	    	if (keysDown[112]) {
++	    		if (!keyF1Pressed)
++					keyF1Toggle = keyF1Pressed = true;
++			} else 
++				keyF1Pressed = false;
++			keyF2Toggle = false;
++	    	if (keysDown[113]) {
++	    		if (!keyF2Pressed)
++					keyF2Toggle = keyF2Pressed = true;
++			} else 
++				keyF2Pressed = false;
++			keyF3Toggle = false;
++	    	if (keysDown[114]) {
++	    		if (!keyF3Pressed)
++					keyF3Toggle = keyF3Pressed = true;
++			} else 
++				keyF3Pressed = false;
++			keyF4Toggle = false;
++	    	if (keysDown[115]) {
++	    		if (!keyF4Pressed)
++					keyF4Toggle = keyF4Pressed = true;
++			} else 
++				keyF4Pressed = false;
++			keyRToggle = false;
++	    	if (keysDown[82]) {
++	    		if (!keyRPressed)
++					keyRToggle = keyRPressed = true;
++			} else 
++				keyRPressed = false;
++				
++	    	keyUpToggle = false;
++	    	if (keysDown[Keyboard.UP]) {
++	    		keyCounter++;
++	    		if (!keyUpPressed) {
++					keyUpToggle = keyUpPressed = true;
++	    		}
++			} else {
++				keyUpPressed = false;
++			}
++			if (key.isDown(Keyboard.UP) ||  key.isDown(Keyboard.DOWN) || key.isDown(Keyboard.LEFT) || key.isDown(Keyboard.RIGHT)) {
++				
++			} else {
++				keyCounter = 0;
++			}
++				
++			keyDownToggle = false;
++	    	if (key.isDown(Keyboard.DOWN)) {
++	    		keyCounter++;
++	    		if (!keyDownPressed)
++					keyDownToggle = keyDownPressed = true;
++			} else {
++				keyDownPressed = false;
++			}
++			keyLeftToggle = false;
++	    	if (key.isDown(Keyboard.LEFT)) {
++	    		keyCounter++;
++	    		if (!keyLeftPressed) {
++					keyLeftToggle = keyLeftPressed = true;
++					}
++			} else {
++				keyLeftPressed = false;
++			}
++			keyRightToggle = false;
++	    	if (key.isDown(Keyboard.RIGHT)) {
++	    		keyCounter++;
++	    		if (!keyRightPressed)
++					keyRightToggle = keyRightPressed = true;
++			} else {
++				keyRightPressed = false;
++			}
++			
++			mouseToggle = false;
++	    	if (mouseDown) {
++	    		if (!mousePressed)
++					mouseToggle = mousePressed = true;
++			} else 
++				mousePressed = false;
++	    }
++	    public function GameplayRender(bsdo:BitmapSpriteDisplayObject) {
++	    	t_level2.text = "Level " + new int(currentLevel + 1);
++	    	t_level2.filters = [glow];
++	    	t_level2.visible = true;
++	    	t_timerText.visible = true;
++	    	if (timer <= 0) {
++	    		t_timerText.text = "";
++	    		timerExpired = true;
++	    		
++	    		//gamestate = TITLESCREEN;
++	    		//return;
++	    	}
++	    	else  {
++		    	if (timer %60 <= 9) { 
++		    		t_timerText.text = "Timer\n" + Math.floor((timer / 60 )).toString() + ":0" + (timer % 60 ).toString();
++		    	} else {
++		    		t_timerText.text = "Timer\n" + Math.floor((timer / 60 )).toString() + ":" + (timer % 60 ).toString();
++		    	}
++	    	}
++	    	
++	    	
++	    	if (timerExpired) {
++	    		t_timerExpired.visible = true;
++	    	}
++	    	
++	    	//t_jellyblocks.visible = true;
++			//b_quit.Show();
++			b_undoButton.Show();
++	    	b_resetButton.Show();
++			bsdo.bitmapData.copyPixels(i_levelselectbackground.bitmap.bitmapData,new Rectangle(0,0,320,240),new Point(0,0),null,null,null);
++			bsdo.bitmapData.fillRect(new Rectangle(0,0,199,199),0);
++		
++			var square:BitmapData = new BitmapData(12,12,false,0);
++			for (var i:int = 1; i < 17 ; i++) 
++				for (var j:int = 1; j < 17 ; j++)  {
++				var rect:Rectangle = new Rectangle();
++				var color:int = level.get(i,j);
++				var lcolor:int = level.get(i-1,j);
++				var rcolor:int = level.get(i+1,j);
++				var bcolor:int = level.get(i,j+1);
++				var tcolor:int = level.get(i,j-1);
++				rect = getColorToRect(color,lcolor != color,rcolor != color,bcolor != color,tcolor != color);
++				
++				
++				if (color != 0)
++					bsdo.bitmapData.copyPixels(i_blocks2.getBitmap().bitmapData,rect,new Point(i*15-15,j*15-15),null,new Point(0,0),0);
++				else if ((i + j) % 2== 0)
++					bsdo.bitmapData.copyPixels(i_blocks2.getBitmap().bitmapData,new Rectangle(15,75,15,15),new Point(i*15-15,j*15-15),null,new Point(0,0),0);
++				else
++					bsdo.bitmapData.copyPixels(i_blocks2.getBitmap().bitmapData,new Rectangle(30,75,15,15),new Point(i*15-15,j*15-15),null,new Point(0,0),0);
++					
++			}
++		bsdo.bitmapData.copyPixels(i_controls.bitmap.bitmapData, new Rectangle(0,0,155,236),new Point(468,207),null,null,false);
++			
++			/// game code ///
++			
++			if (completePuzzle) {
++				t_timerText.text = "";
++				// finished game
++				if (currentLevel == 99) {
++					t_thanksforplaying.visible = true;
++					
++				}
++				
++				bsdo.bitmapData.colorTransform(bsdo.bitmapData.rect,new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));
++				t_jellyblocks.visible = false;
++				t_level2.visible = false;
++				
++				if (currentLevel != 99)
++					b_nextlevel.Show();
++					
++				b_undoButton.Hide();
++				b_resetButton.Hide();
++				t_solvedpuzzle.visible = true;
++				system.visible = true;
++				//bsdo.bitmapData.fillRect(new Rectangle(190 + levelselectedx*52,110 + levelselectedy*52,52,52),0xff00ffff);	
++				
++				for (var i:int = 0; i < 18;i++) {
++					congratsArray[i].visible = true;
++					if (congratsArray[i].y == 63)
++						congratsMovement[i] = true;
++					if (congratsArray[i].y == 37)
++						congratsMovement[i] = false;
++					if (!congratsMovement[i])
++						congratsArray[i].y+=1;
++					else
++						congratsArray[i].y-=1;
++				}
++					
++				if (keyF4Toggle || b_nextlevel.isClicked() || (keyEnterToggle && currentLevel != 99)) {
++					transitionOverride = true;
++					completePuzzleSequence = 0;
++					completePuzzle = false;
++					timerExpired = false;
++					showTimerExpiredScreen = 3;
++					// reset undo
++					b_nextlevel.Hide();
++					system.visible = false;
++					for (var i:int = 0; i < 18;i++)
++						congratsArray[i].visible = false;
++					t_solvedpuzzle.visible = false;
++					moves = 0;
++					currentLevel++;
++					timer = 120;
++					// load level
++					for (var i:int = 0; i < 18; i++) {
++						for (var j:int = 0; j < 18; j++) {
++							level.set(i,j,levels.get(currentLevel,i,j));
++						}
++					}
++					return;
++				}
++			}
++			if (completePuzzleSequence == 0)
++				checkCompleted();
++			if (completePuzzleSequence > 0 && completePuzzleSequence < 25) {
++				var fade:Number  = 1 - 0.7 * (completePuzzleSequence / 25);
++				bsdo.bitmapData.colorTransform(bsdo.bitmapData.rect,new ColorTransform(fade,fade,fade,1,0,0,0,0));
++				completePuzzleSequence++;
++				t_solvedpuzzle.visible = true;
++				t_solvedpuzzle.x = 87 * (completePuzzleSequence/25)*1.0;
++				
++			}
++			if (completePuzzleSequence == 25) {
++				completePuzzleSequence= 26;
++				if (currentLevel != 99) {
++					completedLevels[currentLevel+1] = true;
++					mySo.data.completed = completedLevels;
++					mySo.flush();
++				}
++				completePuzzle = true;
++			}
++	    }
++	    public function TimerExpired() {
++	    	
++	    }
++		public function Gameplay() {
++
++	
++		/// render /// 
++			GameplayRender(bsdo);
++			//// input ////
++			if (showTimerExpiredScreen > 0 && timerExpired) 
++				return;
++			if (showTimerExpiredScreen == 0 && timerExpired)
++				gamestate = TITLESCREEN;
++				
++			Input();
++			if (!completePuzzle) {
++				if (keyUpToggle) {
++					backupBoard();
++					MoveUp();
++					clickSound.play();
++						bsdo.bitmapData.colorTransform(new Rectangle(513+ 36,289-36,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					
++				}
++				if (keyRightToggle) {
++					backupBoard();
++					MoveRight();
++					clickSound.play();	
++						bsdo.bitmapData.colorTransform(new Rectangle(513+ 36+ 36,289,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					
++				}
++				if (keyDownToggle) {
++					backupBoard();
++					MoveDown();
++					clickSound.play();
++						bsdo.bitmapData.colorTransform(new Rectangle(513+ 36,289,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					
++				}
++				if (keyLeftToggle) {
++					backupBoard();
++					MoveLeft();
++					clickSound.play();
++							bsdo.bitmapData.colorTransform(new Rectangle(513,289,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					
++				}
++				if (keyRToggle || b_resetButton.isClicked() || keyF4Toggle) {
++					ResetBoard();
++						bsdo.bitmapData.colorTransform(new Rectangle(534,395,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					
++				}
++				if (keyUToggle || b_undoButton.isClicked() || keyF3Toggle) {
++					restoreBoard();
++							bsdo.bitmapData.colorTransform(new Rectangle(534,350,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					
++				}
++				if (mouseToggle) {
++					if (this.mouseX > 534 && this.mouseY > 350 && this.mouseX < 534 + 36 && this.mouseY < 350 + 36) {
++						restoreBoard();
++						bsdo.bitmapData.colorTransform(new Rectangle(534,350,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					}
++					if (this.mouseX > 534 && this.mouseY > 395 && this.mouseX < 534 + 36 && this.mouseY < 395 + 36) {
++						ResetBoard();
++						bsdo.bitmapData.colorTransform(new Rectangle(534,395,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					}
++					if (this.mouseX > 513 && this.mouseY > 289 && this.mouseX < 513 + 36 && this.mouseY < 289 + 36) {
++						backupBoard();
++						MoveLeft();
++						clickSound.play();
++						bsdo.bitmapData.colorTransform(new Rectangle(513,289,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					}
++					if (this.mouseX > 513+ 36 && this.mouseY > 289 && this.mouseX < 513 + 36+ 36 && this.mouseY < 289 + 36) {
++						backupBoard();
++						MoveDown();
++						clickSound.play();
++						bsdo.bitmapData.colorTransform(new Rectangle(513+ 36,289,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					}
++					if (this.mouseX > 513+ 36+ 36 && this.mouseY > 289 && this.mouseX < 513 + 36+ 36+ 36 && this.mouseY < 289 + 36) {
++						backupBoard();
++						MoveRight();
++						clickSound.play();
++						bsdo.bitmapData.colorTransform(new Rectangle(513+ 36+ 36,289,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					}
++					if (this.mouseX > 513+ 36 && this.mouseY > 289-36 && this.mouseX < 513 + 36+ 36 && this.mouseY < 289 + 36-36) {
++						backupBoard();
++						MoveUp();
++						clickSound.play();
++						bsdo.bitmapData.colorTransform(new Rectangle(513+ 36,289-36,37,37),new ColorTransform(0.3,0.3,0.3,1,0,0,0,0));	
++					}
++				}
++			}
++			/*if (b_quit.isClicked() && (completePuzzleSequence == 0 || completePuzzleSequence == 25 || completePuzzleSequence == 26)) {
++				completePuzzleSequence = 0;
++				gamestate = LEVELSELECT;
++				system.visible = false;
++				b_quit.Hide();
++				b_nextlevel.Hide();
++				t_jellyblocks.visible = false;
++				for (var i:int = 0; i < 18;i++)
++						congratsArray[i].visible = false;
++				t_solvedpuzzle.visible = false;
++				t_thanksforplaying.visible = false;
++				return;
++			}*/
++			
++			
++					
++		}
++		public function getColorToRect(color:int, lcolor:Boolean, rcolor:Boolean, bcolor:Boolean, tcolor:Boolean):Rectangle {
++			var src:Rectangle = new Rectangle();
++			// what block color
++			switch (color) {
++				case 0:
++					src.left = 0;
++					src.top = 0;
++					break;
++				case 1:
++					src.left =0;
++					src.top = 0;
++					break;
++				case 2:
++					src.left = 45*2;
++					src.top = 0;
++					break;
++				case 3:
++					src.left = 67.5*2;
++					src.top = 0;
++					break;
++				case 4:
++					src.left = 22.5*2;
++					src.top = 0;
++					break;
++			}
++			
++			// what block type (left right up down etc)
++			if (lcolor && tcolor && rcolor && bcolor) {
++				src.top += 18*2*1.25;
++			}
++			else if (lcolor && tcolor && rcolor) {
++				src.left += 6*2*1.25;
++				src.top += 18*2*1.25;
++			}
++			else if (lcolor && bcolor && rcolor) {
++				src.left += 12*2*1.25;
++				src.top += 18*2*1.25;
++			}
++			else if (bcolor && tcolor && rcolor) {
++				src.left += 12*2*1.25;
++				src.top += 24*2*1.25;
++			}
++			else if (lcolor && tcolor && bcolor) {
++				src.left += 6*2*1.25;
++				src.top += 24*2*1.25;
++			}
++			else if (lcolor && tcolor) {
++			}
++			else if (tcolor && rcolor) {
++				src.left += 12*2*1.25;
++			}
++			else if (bcolor && rcolor) {
++				src.left += 12*2*1.25;
++				src.top += 12*2*1.25;
++			}
++			else if (lcolor && bcolor) {
++				src.top += 12*2*1.25;
++			}
++			else if (tcolor && bcolor) {
++				src.top += 24*2*1.25;
++			}
++			else if (lcolor && rcolor) {
++				src.top += 30*2*1.25;
++			}
++			else if (lcolor) {
++				src.top += 6*2*1.25;
++			}
++			else if (tcolor) {
++				src.left += 6*2*1.25;
++			}
++			else if (bcolor) {
++				src.left += 6*2*1.25;
++				src.top += 12*2*1.25;
++			}
++			else if (rcolor) {
++				src.left += 12*2*1.25;
++				src.top += 6*2*1.25;
++			}
++			else {
++				src.left += 6*2*1.25;
++				src.top += 6*2*1.25;
++			}
++		
++			src.right = 6*2*1.25 + src.left; 
++			src.bottom = 6*2*1.25 + src.top;
++			src.height = 12*1.25;
++			src.width = 12*1.25;
++			
++			return src;
++		}
++		public function backupBoard():void {
++			for (var i:int = 0; i < 18; i++)
++				for (var j:int = 0; j < 18; j++) {
++					undoBackup.set(moves,i,j,level.get(i,j));
++				}
++			moves++;
++		}
++		public function restoreBoard():void {
++			if (moves == 0)
++				return;
++			moves--;
++			for (var i:int = 0; i < 18; i++)
++				for (var j:int = 0; j < 18; j++) {
++					level.set(i,j,undoBackup.get(moves,i,j));
++				}
++			
++		}
++		public function stickyblocks()
++		{	
++			super();
++            // This initializes if the preloader is turned off.
++            if (stage != null) {
++                init(false);
++            }
++  		}
++  		
++  		public function timerHandler(event:TimerEvent):void {
++  			if (!completePuzzle)
++           	 	timer -= 1;
++           	if (timerExpired)
++	           	showTimerExpiredScreen -= 1;
++        }
++        
++  		public function init(did_load:Boolean) {
++  			this.addEventListener(KeyboardEvent.KEY_DOWN, addKey, false, 0, true);
++			this.addEventListener(KeyboardEvent.KEY_UP, removeKey, false, 0, true);
++			t.addEventListener(TimerEvent.TIMER, tick, false, 0, true);
++			
++	 		realTimer = new Timer(1000,0);
++			
++			realTimer.addEventListener("timer",timerHandler);
++			realTimer.start();
++			clone2 = new BitmapSpriteDisplayObject(new BitmapData(320, 240, true, 0x00ffffff));
++			mySo = SharedObject.getLocal("jellyblocks");
++			//mySo = SharedObject.getLocal("jellyblocks", "/game_files/0000/");
++			if (mySo.data.completed == null) {
++				completedLevels = new Array();
++				for (var i:int = 0; i < 100; i++) {
++					completedLevels[i] = new Boolean();
++					completedLevels[i] = false;
++				}
++				completedLevels[0] = true;
++			} else {
++				completedLevels = mySo.data.completed;
++			}
++			
++			moves = 0;
++			undoBackup = new Array3(100,18,18);
++			system = new ParticleSystem();
++			system.spawnRate = 1 / 5;
++			system.particleClass = SkinnedParticle;
++			system.addEventListener(ParticleEvent.INITIALIZE_PARTICLE, initializeLeaf);
++			system.addEventListener(ParticleEvent.UPDATE_PARTICLE, updateLeaf);
++			system.start();
++			
++			buffer = new BitmapData( WIDTH, HEIGHT, true, 0 );
++			output = new BitmapData( WIDTH, HEIGHT, true, 0 );
++			temp = new BitmapData(WIDTH, HEIGHT, true,0);
++	//		explosionSound = Sound( new ExplosionSoundAsset() );
++			blur = new BlurFilter( EXPLOSION_BLUR_STRENGTH, EXPLOSION_BLUR_STRENGTH, EXPLOSION_BLUR_QUALITY );	
++			
++			explosions = new Array();
++			clickSound = new c_click() as Sound;
++			winnerSound = new c_winner() as Sound;
++			click2Sound = new c_click2() as Sound;
++			gamestate = TITLESCREEN;
++			transitionlevel = new Array2(18,18);
++			level = new Array2(18,18);
++			leveltagged = new Array2(18,18);
++			levels = new Array3(100,18,18);
++			
++			// load temp level
++			for (var i:int = 0; i < 18; i++) {
++				for (var j:int = 0; j < 18; j++) {
++						transitionlevel.set(i,j,0);
++						level.set(j,i,0);
++						if (i == 0 || i == 17 || j == 17 || j ==0)
++							leveltagged.set(j,i,1);
++						else
++							leveltagged.set(j,i,0);
++					}
++			}
++			resetTags();
++			
++			// load all the levels
++			var pickyourself:ByteArray = new b_map() as ByteArray;
++			for (var z:int = 0; z < 100; z++)
++				for (var i:int = 0; i < 18; i++)
++					for (var j:int = 0; j < 18 ; j++) {
++							levels.set(z,i,j,pickyourself.readByte()-48);
++					}
++						
++			// load one level
++			for (var i:int = 0; i < 18; i++) {
++				for (var j:int = 0; j < 18; j++) {
++					level.set(i,j,levels.get(8,i,j));
++				}
++			}
++			Debug.disable();
++			//Debug.fpsStart(stage);
++			//Debug.trace("[%TME%]hi");
++			//trace("hi");
++			stage.frameRate = 60;
++
++			stage.scaleMode = StageScaleMode.NO_SCALE;
++			stage.align = StageAlign.TOP_LEFT;
++			tabEnabled = true;
++			
++			var defaultBitmapData:BitmapData = new BitmapData(640, 480, true, 0x00ffffff);
++			bsdo = new BitmapSpriteDisplayObject(defaultBitmapData);
++			
++			addChild(bsdo);
++
++			//i_gameplaybackground = new Image(c_gameplayBackground,bsdo);
++			//i_gameplaybackground.move(0,0);
++			i_levelselectbackground = new Image(c_levelselectBackground,bsdo);
++			i_levelselectbackground.move(-900,-900);
++			i_arrow = new Image(c_arrow, bsdo);
++			//i_titlescreen = new Image(c_titlescreen, bsdo);
++			i_controls = new Image(c_controls, bsdo);
++			i_blocks = new Image(c_blocks, bsdo);
++			i_blocks2 = new Image(c_blocks2,bsdo);
++			//i_levels1 = new Image(c_levels1, bsdo);
++			//i_levels2 = new Image(c_levels2, bsdo);
++			//i_levels3 = new Image(c_levels3, bsdo);
++			//i_levels4 = new Image(c_levels4, bsdo);
++			i_control1 = new Image(c_control1, bsdo);
++			i_control2 = new Image(c_control2, bsdo);
++			i_arrowkeys = new Image(c_arrowkeys, bsdo);
++			i_cube = new Image(c_cube,bsdo);
++			i_smallcube = new Image(c_smallcube, bsdo);
++			stage.focus = this;
++			stage.addEventListener( Event.ENTER_FRAME, onEnterFrame );
++			stage.addEventListener( MouseEvent.MOUSE_DOWN, onMouseDown );
++			stage.addEventListener( MouseEvent.MOUSE_UP, onStageMouseUp );
++			
++			// Buttons
++		//	b_credits= new MyButton(new Rectangle(554,453,73,20),c_creditsdown,c_credits,bsdo);
++			//b_credits.addListeners(stage);
++			//b_credits.Hide();
++			b_leftarrow = new MyButton(new Rectangle(71,167,73,133),c_leftarrowdown,c_leftarrow,bsdo);
++			b_leftarrow.addListeners(stage);
++			b_leftarrow.Hide();
++			b_rightarrow = new MyButton(new Rectangle(511,167,73,133),c_rightarrowdown,c_rightarrow,bsdo);
++			b_rightarrow.addListeners(stage);
++			b_rightarrow.Hide();
++			b_backtotitlescreen = new MyButton(new Rectangle(9,118,91,20), c_backtotitlescreendown,c_backtotitlescreen,bsdo);
++			b_backtotitlescreen.addListeners(stage);
++			b_backtotitlescreen.Hide();		
++			b_undoButton = new MyButton(new Rectangle(248,135,57,20),c_undodown,c_undo,bsdo);
++			b_undoButton.addListeners(stage);
++			b_undoButton.Hide();
++			b_resetButton = new MyButton(new Rectangle(248,175,57,20), c_resetdown,c_reset, bsdo);
++			b_resetButton.addListeners(stage);
++			b_resetButton.Hide();
++			b_start = new MyButton(new Rectangle(469,432,110,30),c_startdown,c_start,bsdo);
++			b_start.addListeners(stage);
++			b_start.Hide();
++			//b_quit = new MyButton(new Rectangle(544,7,90,30),c_quitdown,c_quit,bsdo);
++			//b_quit.addListeners(stage);
++			//b_quit.Hide();
++			b_instructions = new MyButton(new Rectangle(26,183,106,20),c_binstructionsdown,c_binstructions,bsdo);
++			b_instructions.addListeners(stage);
++			b_instructions.Hide();
++			b_startgame = new MyButton(new Rectangle(200,183,92,20),c_startgamedown,c_startgame,bsdo);
++			b_startgame.addListeners(stage);
++			b_startgame.Hide();
++			b_nextlevel = new MyButton(new Rectangle(240,186,81,20),c_nextleveldown,c_nextlevel,bsdo);
++			b_nextlevel.addListeners(stage);
++			b_nextlevel.Hide();
++			// Apply the glow filter to the cross shape.
++			glow = new GlowFilter();
++			glow.color = 0xffffff;
++			glow.alpha = 1;
++			glow.blurX = 2;
++			glow.blurY = 2;
++			glow.quality = BitmapFilterQuality.MEDIUM;
++			
++			// font
++			font_format = new TextFormat();
++			font_format.font = "Cooper";
++			font_format.size = 36;
++			
++			txt = new TextField();
++			txt.embedFonts = true;
++			txt.autoSize = TextFieldAutoSize.LEFT;
++			txt.defaultTextFormat = this.font_format;
++			txt.text = "Jelly Blocks";
++			txt.filters = [glow];
++			txt.x = 35;
++			txt.y = 47;
++			txt.mouseEnabled = false;
++			addChild(txt);
++			
++		    // font2
++			font_format2 = new TextFormat();
++			font_format2.font = "Casper";
++			font_format2.size = 36;
++			
++			glow.color = 0xffffff;
++			glow.blurX = 4;
++			glow.blurY = 4;
++			var congratsString:String = "CONGRATULATIONS!";
++			
++			txt2 = new TextField();
++			
++			congratsArray = new Array();
++			congratsMovement = new Array();
++			for (var i:int = 0; i < 18; i++) {
++				congratsArray[i] = new TextField();
++				congratsArray[i].embedFonts = true;
++				congratsArray[i].autoSize = TextFieldAutoSize.LEFT;
++				congratsArray[i].defaultTextFormat = this.font_format2;
++				congratsArray[i].filters = [glow];
++				congratsArray[i].x = 15 + i*18;
++				congratsArray[i].y = 37 + i*2;
++				congratsArray[i].mouseEnabled = false;
++				congratsMovement[i] = new Boolean(true);
++				congratsArray[i].text = congratsString.charAt(i);
++				addChild(congratsArray[i]);
++				congratsArray[i].visible = false;
++			}
++			
++			font_format.size = 11;
++			glow.blurX = 2;
++			glow.blurY = 2;
++			t_levelselect = new TextField();
++			t_levelselect.embedFonts = true;
++			t_levelselect.autoSize = TextFieldAutoSize.LEFT;
++			t_levelselect.defaultTextFormat = this.font_format;
++			t_levelselect.text = "Level Select";
++			t_levelselect.filters = [glow];
++			t_levelselect.x = 246;
++			t_levelselect.y = 22;
++			t_levelselect.mouseEnabled = false;
++			t_instructions = new TextField();
++			t_instructions.embedFonts = true;
++			t_instructions.autoSize = TextFieldAutoSize.LEFT;
++			t_instructions.defaultTextFormat = this.font_format;
++			t_instructions.text = "Instructions";
++			t_instructions.filters = [glow];
++			t_instructions.x = 123;
++			t_instructions.y = 11;
++			t_instructions.mouseEnabled = false;
++			addChild(t_instructions);
++			t_credits = new TextField();
++			t_credits.embedFonts = true;
++			t_credits.autoSize = TextFieldAutoSize.LEFT;
++			t_credits.defaultTextFormat = this.font_format;
++			t_credits.text = "Credits";
++			t_credits.filters = [glow];
++			t_credits.x = 266;
++			t_credits.y = 22;
++			t_credits.mouseEnabled = false;
++			t_credits.visible = false;
++			addChild(t_credits);
++			font_format.size = 30;
++			glow.blurX = 3;
++			glow.blurY = 3;
++			t_jellyblocks = new TextField();
++			t_jellyblocks.embedFonts = true;
++			t_jellyblocks.autoSize = TextFieldAutoSize.LEFT;
++			t_jellyblocks.defaultTextFormat = this.font_format;
++			t_jellyblocks.text = "JELLY BLOCKS";
++			t_jellyblocks.filters = [glow];
++			t_jellyblocks.x = 197;
++			t_jellyblocks.y = 10;
++			t_jellyblocks.mouseEnabled = false;
++			glow.blurX = 4;
++			glow.blurY = 4;
++			font_format.size = 9;
++			t_solvedpuzzle = new TextField();
++			t_solvedpuzzle.embedFonts = true;
++			t_solvedpuzzle.autoSize = TextFieldAutoSize.LEFT;
++			t_solvedpuzzle.defaultTextFormat = this.font_format;
++			t_solvedpuzzle.text = "YOU SOLVED THE PUZZLE!";
++			t_solvedpuzzle.filters = [glow];
++			t_solvedpuzzle.x = 87;
++			t_solvedpuzzle.y = 95;
++			t_solvedpuzzle.mouseEnabled = false;
++			
++			t_solvedpuzzle.visible = false;
++			font_format.size = 13;
++			t_thanksforplaying = new TextField();
++			t_thanksforplaying.embedFonts = true;
++			t_thanksforplaying.autoSize = TextFieldAutoSize.LEFT;
++			t_thanksforplaying.defaultTextFormat = this.font_format;
++			t_thanksforplaying.text = "THANKS FOR PLAYING!";
++			t_thanksforplaying.filters = [glow];
++			t_thanksforplaying.x = 75;
++			t_thanksforplaying.y = 110;
++			t_thanksforplaying.mouseEnabled = false;
++			t_thanksforplaying.visible = false;
++			t_timerExpired = new TextField();
++			t_timerExpired.embedFonts = true;
++			t_timerExpired.autoSize = TextFieldAutoSize.LEFT;
++			t_timerExpired.defaultTextFormat = this.font_format;
++			t_timerExpired.text = "Time Expired!";
++			t_timerExpired.filters = [glow];
++			t_timerExpired.x = 75;
++			t_timerExpired.y = 110;
++			t_timerExpired.mouseEnabled = false;
++			t_timerExpired.visible = false;
++			
++			font_format.size = 16;
++			glow.blurX = 3;
++			glow.blurY = 3;
++			t_progress = new TextField();
++			t_progress.embedFonts = true;
++			t_progress.autoSize = TextFieldAutoSize.LEFT;
++			t_progress.defaultTextFormat = this.font_format;
++			t_progress.text = "progress is automatically saved";
++			t_progress.filters = [glow];
++			t_progress.x = 185;
++			t_progress.y = 380;
++			t_progress.mouseEnabled = false;
++			t_progress.visible = false;
++			font_format.size = 10;
++			
++			t_goal = new TextField();
++			t_goal.embedFonts = true;
++			t_goal.autoSize = TextFieldAutoSize.LEFT;
++			t_goal.defaultTextFormat = this.font_format;
++			t_goal.text = "GOAL: To connect all the same colored blocks together";
++			t_goal.filters = [glow];
++			t_goal.x = 14;
++			t_goal.y = 32;
++			t_goal.mouseEnabled = false;
++			
++			t_control = new TextField();
++			t_control.embedFonts = true;
++			t_control.autoSize = TextFieldAutoSize.LEFT;
++			t_control.defaultTextFormat = this.font_format;
++			t_control.text = "You control all blocks simultaneously";
++			t_control.filters = [glow];
++			t_control.x = 63;
++			t_control.y = 95;
++			t_control.mouseEnabled = false;
++			
++			t_same = new TextField();
++			t_same.embedFonts = true;
++			t_same.autoSize = TextFieldAutoSize.LEFT;
++			t_same.defaultTextFormat = this.font_format;
++			t_same.text = "Same colored blocks stick";
++			t_same.filters = [glow];
++			t_same.x = 92;
++			t_same.y = 170;
++			t_same.mouseEnabled = false;
++			t_same.visible = false;
++			t_creditsText = new TextField();
++			t_creditsText.embedFonts = true;
++			t_creditsText.autoSize = TextFieldAutoSize.LEFT;
++			t_creditsText.defaultTextFormat = this.font_format;
++			t_creditsText.text = "Programmer/Artist - Michael Le\n\n\n\nThanks to the Flash Community\n\n";
++			t_creditsText.filters = [glow];
++			t_creditsText.x = 125;
++			t_creditsText.y = 100;
++			t_same.mouseEnabled = false;
++			t_creditsText.visible = false;
++			t_control.visible = false;
++			t_goal.visible = false;
++			t_instructions.visible = false;
++			t_creditsText.visible = false;
++			t_level = new TextField();
++			t_level.embedFonts = true;
++			t_level.autoSize = TextFieldAutoSize.LEFT;
++			t_level.defaultTextFormat = this.font_format;
++			t_level.text = "Level 23";
++			t_level.filters = [glow];
++			t_level.x = 266;
++			t_level.y = 72;
++			font_format.size = 15;
++			t_level2 = new TextField();
++			t_level2.embedFonts = true;
++			t_level2.autoSize = TextFieldAutoSize.LEFT;
++			t_level2.defaultTextFormat = this.font_format;
++			t_level2.text = "Level 23";
++			t_level2.filters = [glow];
++			t_level2.x = 243;
++			t_level2.y = 20;
++			t_level.visible = false;
++			t_level2.visible = false;
++			t_level2.mouseEnabled = false;
++			t_timerText = new TextField();
++			//t_timerText.embedFonts = true;
++			 ff = new TextFormat();
++			ff.align = "center";
++			ff.bold = true;
++			ff.size = 15;
++			t_timerText.defaultTextFormat = this.ff;
++			t_timerText.autoSize = TextFieldAutoSize.LEFT;
++			 
++			t_timerText.x = 251;
++			t_timerText.y = 50;
++			t_timerText.text = "Timer\n1:12";
++
++			t_timerText.visible = false;
++			t_level.mouseEnabled = false;
++			font_format.size = 12;
++			font_format.url = "http://www.jellyblocks.com";
++			t_jellyblockscom = new TextField();
++			t_jellyblockscom.embedFonts = true;
++			t_jellyblockscom.autoSize = TextFieldAutoSize.LEFT;
++			t_jellyblockscom.defaultTextFormat = this.font_format;
++			t_jellyblockscom.text = "www.jellyblocks.com";
++			t_jellyblockscom.filters = [glow];
++			t_jellyblockscom.x = 400;
++			t_jellyblockscom.y = 459;
++			t_jellyblockscom.mouseEnabled = false;
++			t_jellyblockscom.selectable = false;
++			t_jellyblockscom.visible = true;
++			
++			//t_jellyblockscom.addEventListener(MouseEvent.CLICK, callLink);
++			addChild(t_creditsText);
++			addChild(t_level);
++			addChild(t_level2);
++			addChild(t_goal);
++			addChild(t_control);
++			addChild(t_same);
++		//	addChild(t_jellyblockscom);
++			addChild(t_progress);
++			t_progress.visible = false;
++			addChild(t_thanksforplaying);
++			addChild(t_solvedpuzzle);
++			addChild(t_jellyblocks);
++			addChild(t_levelselect);
++			addChild(t_timerText);
++			addChild(t_timerExpired);
++			t_levelselect.visible = false;
++			
++			t_jellyblocks.visible = false;
++			
++			//addChild( new FPS() );
++			addChild( new Bitmap( output ) );
++			Key.initialize(stage);
++			//Debug.timerStop();
++			
++			//stage.addEventListener( MouseEvent.MOUSE_DOWN, createExplosion );
++			//stage.addEventListener( Event.ENTER_FRAME, renderExplosions );
++			addChild(system);
++			system.visible = false;
++			
++		}
++		public function callLink():void {
++		  var url:String = "http://www.jellyblocks.com";
++		  var request:URLRequest = new URLRequest(url);
++		  try {
++		    navigateToURL(request, '_blank');
++		  } catch (e:Error) {
++		    trace("Error occurred!");
++		  }
++		}
++		private function createExplosion( event: Event ): void
++		{
++			whichColor++;
++			if (whichColor == 3)
++				whichColor = 0;
++				
++			var explosion: Explosion = new Explosion( mouseX, mouseY, whichColor );
++			explosions.push( explosion );
++			//explosionSound.play();
++		}
++		public function Transition():void {
++			
++			if (transitionCounter == 0) {
++				click2Sound.play();
++				switch (afterState) {
++					case TITLESCREEN:
++						TitlescreenRender(clone2);
++						break;
++					case GAME:
++						GameplayRender(clone2);
++						break;
++					case LEVELSELECT:
++						LevelSelectRender(clone2);
++						break;
++					case CREDITS:
++						CreditsRender(clone2);
++						break;
++					case INSTRUCTIONS:
++						InstructionsRender(clone2);
++						break;
++					
++				}
++			}
++			transitionCounter++;
++			if (transitionCounter > 20) {
++				transitionCounter = 0;
++				gamestate = afterState;
++				return;
++			}
++			b_backtotitlescreen.Hide();
++			b_leftarrow.Hide();
++			b_rightarrow.Hide();
++			b_start.Hide();
++			b_startgame.Hide();
++			b_instructions.Hide();
++			//b_quit.Hide(); 
++			b_nextlevel.Hide();
++			b_undoButton.Hide();
++			b_resetButton.Hide();
++		//	b_credits.Hide();
++			for (var i:int = this.numChildren-1; i >= 0; i--) {
++				this.getChildAt(i).visible = false;
++			}
++			this.getChildAt(0).visible = true;
++			
++			stage.invalidate();
++			bsdo.bitmapData.fillRect(bsdo.bitmapData.rect,0);
++			bsdo.bitmapData.copyPixels(clone,clone.rect,new Point(-1*transitionCounter*16,0),null,null,null);
++			bsdo.bitmapData.copyPixels(clone2.bitmapData,clone2.bitmapData.rect,new Point(-1*transitionCounter*16+320,0),null,null,null);
++			
++		}
++		private function onEnterFrame(event:Event):void
++		{
++			stage.focus = this;
++			//Debug.timerReset();
++			//Debug.timerStart();
++			
++			switch (gamestate) {
++				case TITLESCREEN:
++					Titlescreen();
++					if (gamestate != TITLESCREEN) {
++						beforeState = TITLESCREEN;
++						afterState = gamestate;
++						gamestate = TRANSITION;
++						clone = bsdo.bitmapData.clone();
++					}
++					break;
++				case LEVELSELECT:
++					LevelSelect();
++					if (gamestate != LEVELSELECT) {
++						beforeState= LEVELSELECT;
++						afterState = gamestate;
++						gamestate = TRANSITION;
++						clone = bsdo.bitmapData.clone();
++					}
++					break;
++				case GAME:
++					Gameplay();
++					if (gamestate != GAME || transitionOverride) {
++						transitionOverride= false;
++						beforeState = GAME;
++						afterState = gamestate;
++						gamestate = TRANSITION;
++						clone = bsdo.bitmapData.clone();
++					}
++					break;
++				case INSTRUCTIONS:
++					Instructions();
++					if (gamestate != INSTRUCTIONS) {
++						beforeState = INSTRUCTIONS;
++						afterState = gamestate;
++						gamestate = TRANSITION;
++						clone = bsdo.bitmapData.clone();
++					}
++					break;
++				case CREDITS:
++					Credits();
++					if (gamestate != CREDITS) {
++						beforeState= CREDITS;
++						afterState = gamestate;
++						gamestate = TRANSITION;
++						clone = bsdo.bitmapData.clone();
++					}
++					break;
++				case TRANSITION:
++					Transition();
++					break;
++					
++			}
++			//Debug.trace(mouseDown);		
++			//i_gameplaybackground.move(Math.random()*640,0);
++			//Debug.timerMilliSeconds();
++		}
++		
++		private function onMouseDown( event: MouseEvent ): void
++		{
++			mousex = event.stageX;
++			mousey = event.stageY;
++			mouseDown = true;
++		}
++		private function onStageMouseUp( event: MouseEvent ): void
++		{
++			mousex = event.stageX;
++			mousey = event.stageY;
++			//stage.removeEventListener( MouseEvent.MOUSE_UP, onStageMouseUp );
++			mouseDown = false;
++		}
++		private function onMouseMove(event:MouseEvent) :void {
++			
++		}
++		function changeColorUp(color:int, x:int, y:int):void {
++						
++			leveltagged.set(x,y,1);
++		
++			if (level.get(x+1,y) == color && leveltagged.get(x+1,y) != 1) {
++				changeColorUp(color, x+1, y);
++			}
++			if (level.get(x-1,y) == color && leveltagged.get(x-1,y) != 1) {
++				changeColorUp(color, x-1, y);
++			}
++			if (level.get(x,y-1) == color && leveltagged.get(x,y-1) != 1) {
++				changeColorUp(color, x, y-1);
++			}
++			if ((level.get(x,y+1) == 4 || level.get(x,y+1) == 2 || level.get(x,y+1) == 3) && leveltagged.get(x,y+1) != 1) {
++				changeColorUp(level.get(x,y+1), x, y+1);
++			}
++		}
++		
++		function changeColorRight(color:int,  x:int,  y:int):void {
++			leveltagged.set(x,y,1);
++			
++		
++			if (level.get(x,y+1) == color && leveltagged.get(x,y+1) != 1) {
++				changeColorRight(color, x, y+1);
++			}
++			if (level.get(x,y-1) == color && leveltagged.get(x,y-1) != 1) {
++				changeColorRight(color, x, y-1);
++			}
++			if (level.get(x+1,y) == color && leveltagged.get(x+1,y) != 1) {
++				changeColorRight(color, x+1, y);
++			}
++			if ((level.get(x-1,y) == 4 || level.get(x-1,y) == 2 || level.get(x-1,y) == 3) && leveltagged.get(x-1,y) != 1) {
++				changeColorRight(level.get(x-1,y), x-1, y);
++			}
++		}
++		function changeColorDown(color:int,  x:int,  y:int):void {
++		
++			leveltagged.set(x,y,1);
++		
++			if (level.get(x,y+1) == color && leveltagged.get(x,y+1) != 1) {
++				changeColorDown(color, x, y+1);
++			}
++			if (level.get(x+1,y) == color && leveltagged.get(x+1,y) != 1) {
++				changeColorDown(color, x+1, y);
++			}
++			if (level.get(x-1,y) == color && leveltagged.get(x-1,y) != 1) {
++				changeColorDown(color, x-1, y);
++			}
++			if ((level.get(x,y-1) == 4 || level.get(x,y-1) == 2 || level.get(x,y-1) == 3) && leveltagged.get(x,y-1) != 1) {
++				changeColorDown(level.get(x,y-1), x, y-1);
++			}
++		}
++		
++		function changeColorLeft(color:int,  x:int,  y:int):void {
++		
++			leveltagged.set(x,y,1);
++		
++			if (level.get(x-1,y) == color && leveltagged.get(x-1,y) != 1) {
++				changeColorLeft(color, x-1, y);
++			}
++			if (level.get(x,y+1) == color && leveltagged.get(x,y+1) != 1) {
++				changeColorLeft(color, x, y+1);
++			}
++			if (level.get(x,y-1) == color && leveltagged.get(x,y-1) != 1) {
++				changeColorLeft(color, x, y-1);
++			}
++			if ((level.get(x+1,y) == 4 || level.get(x+1,y) == 2 || level.get(x+1,y) == 3) && leveltagged.get(x+1,y) != 1) {
++				changeColorLeft(level.get(x+1,y), x+1, y);
++			}
++		}
++		function tagAround(color:int,  i:int,  j:int):void {
++			leveltagged.set(i,j,1);
++		
++			if (level.get(i-1,j) == color && leveltagged.get(i-1,j) == 0) {
++				tagAround(color,i-1,j);
++			}
++			if (level.get(i+1,j) == color && leveltagged.get(i+1,j) == 0) {
++				tagAround(color,i+1,j);
++			}
++			if (level.get(i,j-1) == color && leveltagged.get(i,j-1) == 0) {
++				tagAround(color,i,j-1);
++			}
++			if (level.get(i,j+1) == color && leveltagged.get(i,j+1) == 0) {
++				tagAround(color,i,j+1);
++			}
++		}
++		function resetTags():void {
++			for (var i:int = 1; i < 17; i++) {
++				for (var j:int = 1; j < 17; j++) {
++					leveltagged.set(i,j,0);
++				}
++			}
++		}
++		function MoveRight():void {
++			resetTags();
++			for (var i:int = 2; i < 18; i++) {
++				for (var j:int = 1; j < 17; j++) {
++					if (level.get(i,j) == 1) {
++						if ((level.get(i-1,j) == 4 || level.get(i-1,j) == 2 || level.get(i-1,j) == 3) && leveltagged.get(i-1,j) != 1)
++							changeColorRight(level.get(i-1,j), i-1, j);
++					}
++				}
++			}
++
++			for (var i:int = 15; i > 0; i--) {
++					for (var j:int = 16; j > 0; j--) {
++						for (var z:int = 2; z < 5; z++)
++							if (level.get(i,j) == z && level.get(i+1,j) == 0 && leveltagged.get(i,j) != 1) {
++								level.set(i,j,0);
++								level.set(i+1,j,z);
++							}
++					}
++				} 
++		}
++		function MoveDown():void {
++			resetTags();
++			for (var i:int = 1; i < 18; i++) {
++				for (var j:int = 2; j < 18; j++) {
++					if (level.get(i,j) == 1) {
++						if ((level.get(i,j-1) == 4 || level.get(i,j-1) == 2 || level.get(i,j-1) == 3) && leveltagged.get(i,j-1) != 1)
++							changeColorDown(level.get(i,j-1), i, j-1);
++					}
++				}
++			}
++
++			for (var i:int = 16; i > 0; i--) {
++				for (var j:int = 15; j > 0; j--) {
++					for (var z:int = 2; z < 5; z++)
++					if (level.get(i,j) == z && level.get(i,j+1) == 0 && leveltagged.get(i,j) != 1) {
++						level.set(i,j,0);
++						level.set(i,j+1,z);
++					}
++				}
++			}
++		}
++		function MoveLeft():void {
++			resetTags();
++			for (var i:int = 0; i < 17; i++) {
++				for (var j:int = 1; j < 17; j++) {
++					if (level.get(i,j) == 1) {
++						if ((level.get(i+1,j) == 4 || level.get(i+1,j) == 2 || level.get(i+1,j) == 3) && leveltagged.get(i+1,j) != 1)
++							changeColorLeft(level.get(i+1,j), i+1, j);
++					}
++				}
++			}
++			for (var i:int = 1; i < 18; i++) {
++				for (var j:int = 1; j < 17; j++) {
++					for (var z:int = 2; z < 5; z++)
++						if (level.get(i,j) == z && level.get(i-1,j) == 0 && leveltagged.get(i,j) != 1) {
++							level.set(i,j,0);
++							level.set(i-1,j,z);
++						}
++				}
++			}
++		}
++		
++
++		function MoveUp():void {
++			
++			resetTags();
++			for (var j:int = 0; j < 16; j++) {
++				for (var i:int = 1; i < 17; i++) {
++					if (level.get(i,j) == 1) {
++						if ((level.get(i,j+1) == 4 || level.get(i,j+1) == 2 || level.get(i,j+1) == 3) && leveltagged.get(i,j+1) != 1)
++							changeColorUp(level.get(i,j+1), i, j+1);
++					}
++				}
++			}
++			
++			for (var j:int = 2; j < 17; j++) {
++				for (var i:int = 1; i < 17; i++) {
++					for (var z:int = 2; z < 5; z++)
++						if (level.get(i,j) == z && level.get(i,j-1) == 0 && leveltagged.get(i,j) != 1)  {
++							level.set(i,j,0);
++							level.set(i,j-1,z);
++						}
++					}
++				}
++			//moveup = 1;
++		}
++		
++		public function ResetBoard():void {
++			moves = 0;
++			// load level
++				for (var i:int = 0; i < 18; i++) {
++					for (var j:int = 0; j < 18; j++) {
++						level.set(i,j,levels.get(currentLevel,i,j));
++					}
++				}
++		} 
++		public function checkCompleted():void {
++			resetTags();
++			completePuzzleSequence = 1;
++			for (var z:int = 2; z <= 4; z++ ){
++				for (var i:int = 1; i <= 16; i++) {
++					for (var j:int = 1; j <= 16; j++) {
++						if (level.get(i,j) == z) {
++							tagAround(z,i,j);
++							j = 30;
++							i = 30;
++						}
++					}
++				}
++				for (var i:int = 1; i <= 16; i++) {
++					for (var j:int = 1; j <= 16; j++) {
++						if (level.get(i,j) == z && leveltagged.get(i,j) == 0) {
++							completePuzzleSequence = 0;
++							
++							resetTags();
++							return;
++						}
++					}
++				}
++			}
++			//playfireworks = true;
++			resetTags();
++			winnerSound.play();
++		}
++		//--------------------------------------
++	//  Protected Methods
++	//--------------------------------------
++		
++		/**
++		 *  Initializes a single leaf particle.
++		 */
++		private function initializeLeaf(event:ParticleEvent):void
++		{
++			var particle:SkinnedParticle = event.particle as SkinnedParticle;
++			if(!particle.skin)
++			{
++				if(Math.random() >= 0.4)
++				{
++					particle.skin = new GreenLeaf();
++				}
++				else
++				{
++					particle.skin = new BrownLeaf();
++				}
++			}
++			particle.checkDestroyConditionFunction = canDestroyParticle;
++			particle.size = 10 + Math.random() * 25;
++			
++			//start above the top vertically and randomly horizontally
++			var width:Number = this.stage.stageWidth;
++			particle.position = new Point(Math.random() * 3 * width - width, -particle.size);
++			
++			//alpha depends on size
++			particle.alpha = 0.1 + particle.size / 40;
++			
++			particle.velocity = new Point(0, 2 * (particle.size / 35) + this.stage.stageHeight / 250);
++		}
++		
++		/**
++		 *  Updates a single leaf particle.
++		 */
++		private function updateLeaf(event:ParticleEvent):void
++		{
++			var particle:SkinnedParticle = event.particle as SkinnedParticle;
++			
++			var wind:Number = 10 * (this.mouseX - this.stage.stageWidth / 2) / (this.stage.stageWidth / 2);
++			particle.rotation += 0;
++			
++			particle.velocity = new Point(0, particle.velocity.y);
++		}
++		
++		/**
++		 *  Instead of being based on time, the particle will be destroyed
++		 *  when it reaches the bottom of the Flash window.
++		 */
++		private function canDestroyParticle(particle:SkinnedParticle):Boolean
++		{
++			return particle.y > this.stage.stageHeight;
++		}
++		
++		/**
++		 *  @private
++		 *  The particle system should appear at 0,0
++		 */
++		private function stageResizeHandler(event:Event):void
++		{
++			this.system.x = 0;
++			this.system.y = 0;
++		}
++	
++	
++	}
++	
++}
++
++
